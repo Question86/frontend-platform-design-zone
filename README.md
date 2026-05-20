@@ -1,8 +1,10 @@
 # Frontend Platform Design Zone
 
 ![Flagship Cover](assets/cover_autonomous_wf.jpg)
+![Network Cover](assets/nw.jpg)
 
 Flagship visual: `cover_autonomous_wf.jpg` (Autonomous Workflow Cockpit) from local design experiments.
+Secondary visual: `nw.jpg`.
 Curated reference repository for frontend/platform design sheets.
 
 ## Contents
