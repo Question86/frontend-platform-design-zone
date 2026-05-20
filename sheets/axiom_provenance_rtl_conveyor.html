@@ -1,0 +1,383 @@
+
+<style>
+  @keyframes gearSpin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
+  @keyframes gearSpinR { from{transform:rotate(0deg)}to{transform:rotate(-360deg)} }
+  @keyframes floatPkg { 0%,100%{transform:translateY(0px)}50%{transform:translateY(-2px)} }
+  @keyframes smokeRise { 0%{transform:translateY(0) scale(1);opacity:0.7}100%{transform:translateY(-20px) scale(1.5);opacity:0} }
+  @keyframes rejectFall { 0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(70px) rotate(15deg);opacity:0} }
+  @keyframes verifiedPulse { 0%,100%{box-shadow:0 0 6px #00ffcc,0 0 12px #00ffcc44}50%{box-shadow:0 0 18px #00ffcc,0 0 36px #00ffcc88} }
+  @keyframes scanBeam { 0%{opacity:0;transform:scaleX(0.2)}40%{opacity:1;transform:scaleX(1)}60%{opacity:1}100%{opacity:0;transform:scaleX(0.2)} }
+  @keyframes pixelBlink { 0%,49%{opacity:1}50%,99%{opacity:0} }
+  @keyframes boardVerified { 0%,100%{background:#0a1520}50%{background:#052015} }
+  @keyframes villainBob { 0%,100%{transform:translateY(0) scaleX(1)}50%{transform:translateY(-3px) scaleX(-1)} }
+  @keyframes glitchFlicker { 0%,100%{opacity:1}45%,55%{opacity:0.4}48%,52%{opacity:0.7} }
+</style>
+
+<div style="background:#0a0e1a;border-radius:12px;overflow:hidden;width:100%;max-width:740px;margin:0 auto;font-family:monospace;">
+
+  <div style="background:#111827;padding:6px 14px;display:flex;align-items:center;gap:8px;border-bottom:2px solid #1e3a5f;">
+    <span style="color:#00ffcc;font-size:11px;letter-spacing:2px;font-weight:bold;">AXIOM PROVENANCE SYSTEM</span>
+    <span style="color:#223;font-size:9px;margin-left:auto;">v2.4.1 — LIVE</span>
+    <span style="width:8px;height:8px;border-radius:50%;background:#00ff88;animation:pixelBlink 1.2s infinite;"></span>
+  </div>
+
+  <div id="scene" style="position:relative;height:290px;overflow:hidden;background:linear-gradient(180deg,#0d1b2a 0%,#091220 65%,#060a10 100%);">
+
+    <canvas id="c" style="position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:0;"></canvas>
+
+    <div id="beltEl" style="position:absolute;bottom:74px;left:0;right:0;height:18px;background:repeating-linear-gradient(90deg,#1a3050 0,#1a3050 14px,#0f2035 14px,#0f2035 16px,#2a5080 16px,#2a5080 30px,#0f2035 30px,#0f2035 32px);z-index:3;"></div>
+    <div style="position:absolute;bottom:72px;left:0;right:0;height:2px;background:#3a7090;z-index:3;"></div>
+    <div style="position:absolute;bottom:90px;left:0;right:0;height:2px;background:#1a3050;z-index:3;"></div>
+
+    <div id="pkgLayer" style="position:absolute;bottom:93px;left:0;right:0;height:40px;pointer-events:none;z-index:4;"></div>
+    <div id="rejectLayer" style="position:absolute;bottom:0;left:0;right:0;height:92px;pointer-events:none;overflow:hidden;z-index:4;"></div>
+
+    <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;" viewBox="0 0 740 290" preserveAspectRatio="xMidYMid slice">
+
+      <rect x="0" y="155" width="740" height="135" fill="#0d1a28"/>
+      <rect x="0" y="155" width="740" height="10" fill="#1a3050"/>
+
+      <rect x="570" y="50" width="150" height="140" fill="#0f2035" stroke="#1e4060" stroke-width="1.5" rx="2"/>
+      <rect x="575" y="55" width="140" height="135" fill="#0c1a2a" stroke="#152e48" stroke-width="1" rx="1"/>
+      <rect x="580" y="60" width="58" height="38" fill="#0e2540" stroke="#1a4060" stroke-width="1" rx="1"/>
+      <rect x="582" y="62" width="54" height="34" fill="#071828"/>
+      <text x="609" y="75" text-anchor="middle" font-size="6" fill="#00ccff" font-family="monospace">DATA</text>
+      <text x="609" y="83" text-anchor="middle" font-size="5" fill="#0088aa" font-family="monospace">FACTORY</text>
+      <text x="609" y="91" text-anchor="middle" font-size="5" fill="#00ffcc" font-family="monospace">ONLINE</text>
+      <rect x="645" y="60" width="58" height="38" fill="#0e2540" stroke="#1a4060" stroke-width="1" rx="1"/>
+      <rect x="647" y="62" width="54" height="34" fill="#071828"/>
+      <text x="674" y="75" text-anchor="middle" font-size="5" fill="#0088ff" font-family="monospace">PKG/s</text>
+      <text x="674" y="85" text-anchor="middle" font-size="8" fill="#00ffcc" font-weight="bold" font-family="monospace" id="pkgCounter">000</text>
+
+      <rect x="600" y="108" width="8" height="32" fill="#1a3050" stroke="#2a5070" stroke-width="1"/>
+      <rect x="620" y="112" width="8" height="28" fill="#1a3050" stroke="#2a5070" stroke-width="1"/>
+      <rect x="640" y="106" width="8" height="34" fill="#1a3050" stroke="#2a5070" stroke-width="1"/>
+      <rect x="660" y="110" width="8" height="30" fill="#1a3050" stroke="#2a5070" stroke-width="1"/>
+      <rect x="680" y="108" width="8" height="32" fill="#1a3050" stroke="#2a5070" stroke-width="1"/>
+      <rect x="556" y="145" width="16" height="10" fill="#2a5070" stroke="#3a7090" stroke-width="1"/>
+      <rect x="558" y="148" width="12" height="20" fill="#1a3050"/>
+
+      <rect x="0" y="50" width="110" height="140" fill="#0f1e30" stroke="#1a3a5a" stroke-width="1.5" rx="2"/>
+      <rect x="5" y="55" width="100" height="130" fill="#0b1828" rx="1"/>
+      <text x="55" y="80" text-anchor="middle" font-size="7" fill="#aaddff" font-family="monospace" font-weight="bold">CUSTOMER</text>
+      <rect x="12" y="85" width="86" height="60" fill="#1a2a3a" stroke="#2a4060" stroke-width="1" rx="1"/>
+      <text x="55" y="103" text-anchor="middle" font-size="6" fill="#4488aa" font-family="monospace">PERFORMANCE</text>
+      <text x="55" y="114" text-anchor="middle" font-size="6" fill="#4488aa" font-family="monospace">BOARD</text>
+      <text id="boardSvgText" x="55" y="132" text-anchor="middle" font-size="11" fill="#334466" font-family="monospace" font-weight="bold">WAIT</text>
+      <rect x="12" y="152" width="86" height="24" fill="#0e1e2e" stroke="#1a3050" stroke-width="1" rx="1"/>
+      <text id="pkgCountText" x="55" y="160" text-anchor="middle" font-size="5" fill="#336688" font-family="monospace">received: 0</text>
+      <text id="rejCountText" x="55" y="170" text-anchor="middle" font-size="5" fill="#662222" font-family="monospace">rejected: 0</text>
+
+      <g id="axiomStation">
+        <rect x="292" y="55" width="86" height="115" fill="#0f2035" stroke="#00aacc" stroke-width="1.5" rx="2"/>
+        <rect x="296" y="59" width="78" height="111" fill="#0a1828" rx="1"/>
+        <text x="335" y="75" text-anchor="middle" font-size="8" fill="#00ccff" font-family="monospace" font-weight="bold">AXIOM</text>
+        <text x="335" y="84" text-anchor="middle" font-size="5" fill="#0088aa" font-family="monospace">VERIFY GATE</text>
+        <line x1="296" y1="88" x2="374" y2="88" stroke="#1a4060" stroke-width="0.5"/>
+        <text x="302" y="100" font-size="6" fill="#0088aa" font-family="monospace">● hash.sha256</text>
+        <text x="302" y="111" font-size="6" fill="#0088aa" font-family="monospace">● manifest.json</text>
+        <text x="302" y="122" font-size="6" fill="#0088aa" font-family="monospace">● state.json</text>
+        <text x="302" y="133" font-size="6" fill="#0088aa" font-family="monospace">● trust-report</text>
+        <rect x="297" y="140" width="76" height="20" fill="#071015" stroke="#0a3050" stroke-width="1" rx="1"/>
+        <text id="scanSvgText" x="335" y="153" text-anchor="middle" font-size="7" fill="#00ffcc" font-family="monospace">SCANNING</text>
+      </g>
+
+      <line x1="292" y1="92" x2="292" y2="156" stroke="#00ccff" stroke-width="1.5" stroke-opacity="0.7"/>
+      <line x1="378" y1="92" x2="378" y2="156" stroke="#00ccff" stroke-width="1.5" stroke-opacity="0.7"/>
+      <line x1="292" y1="156" x2="378" y2="156" stroke="#00ccff" stroke-width="0.5" stroke-opacity="0.4" stroke-dasharray="3,2"/>
+      <text x="335" y="168" text-anchor="middle" font-size="5" fill="#00ccff" font-family="monospace" fill-opacity="0.6">SCAN ZONE</text>
+
+      <rect x="425" y="155" width="28" height="80" fill="#1a0808" stroke="#440000" stroke-width="1.5" rx="0 0 3 3"/>
+      <rect x="425" y="155" width="28" height="3" fill="#cc2200"/>
+      <text x="439" y="150" text-anchor="middle" font-size="6" fill="#cc2200" font-family="monospace">REJECT</text>
+      <text x="439" y="220" text-anchor="middle" font-size="5" fill="#440000" font-family="monospace">CHUTE</text>
+
+    </svg>
+
+    <div id="gear1" style="position:absolute;bottom:38px;left:580px;animation:gearSpin 3s linear infinite;z-index:3;">
+      <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="none" stroke="#2a5080" stroke-width="3"/><circle cx="14" cy="14" r="4" fill="#1a3050"/><rect x="12.5" y="2" width="3" height="6" fill="#2a5080" rx="1"/><rect x="12.5" y="20" width="3" height="6" fill="#2a5080" rx="1"/><rect x="2" y="12.5" width="6" height="3" fill="#2a5080" rx="1"/><rect x="20" y="12.5" width="6" height="3" fill="#2a5080" rx="1"/></svg>
+    </div>
+    <div id="gear2" style="position:absolute;bottom:38px;left:620px;animation:gearSpinR 2.5s linear infinite;z-index:3;">
+      <svg width="22" height="22" viewBox="0 0 28 28"><circle cx="14" cy="14" r="10" fill="none" stroke="#1e4060" stroke-width="3"/><circle cx="14" cy="14" r="4" fill="#0f2035"/><rect x="12.5" y="2" width="3" height="6" fill="#1e4060" rx="1"/><rect x="12.5" y="20" width="3" height="6" fill="#1e4060" rx="1"/><rect x="2" y="12.5" width="6" height="3" fill="#1e4060" rx="1"/><rect x="20" y="12.5" width="6" height="3" fill="#1e4060" rx="1"/></svg>
+    </div>
+
+    <div id="smoke1" style="position:absolute;bottom:190px;left:608px;width:9px;height:9px;background:#1a4060;border-radius:50%;animation:smokeRise 1.8s ease-out infinite;z-index:3;"></div>
+    <div id="smoke2" style="position:absolute;bottom:190px;left:630px;width:6px;height:6px;background:#1a3050;border-radius:50%;animation:smokeRise 1.8s ease-out infinite 0.7s;z-index:3;"></div>
+    <div id="smoke3" style="position:absolute;bottom:190px;left:652px;width:8px;height:8px;background:#1a4060;border-radius:50%;animation:smokeRise 1.8s ease-out infinite 1.3s;z-index:3;"></div>
+
+    <div id="inspector" style="position:absolute;bottom:93px;left:390px;z-index:3;">
+      <svg width="34" height="50" viewBox="0 0 34 50">
+        <rect x="10" y="0" width="14" height="12" fill="#aaddff" rx="1"/>
+        <rect x="8" y="2" width="18" height="10" fill="#cceeff" rx="1"/>
+        <rect x="6" y="4" width="22" height="7" fill="#88ccee" rx="1"/>
+        <rect x="11" y="5" width="5" height="4" fill="#003344"/>
+        <rect x="18" y="5" width="5" height="4" fill="#003344"/>
+        <rect x="12" y="6" width="3" height="2" fill="#00ffcc" opacity="0.9"/>
+        <rect x="19" y="6" width="3" height="2" fill="#00ffcc" opacity="0.9"/>
+        <rect x="10" y="12" width="14" height="16" fill="#4488aa"/>
+        <rect x="12" y="14" width="10" height="6" fill="#336688"/>
+        <rect x="4" y="14" width="6" height="12" fill="#4488aa" rx="1"/>
+        <rect x="24" y="14" width="6" height="12" fill="#4488aa" rx="1"/>
+        <rect x="28" y="10" width="5" height="14" fill="#00ccff" rx="1" opacity="0.8"/>
+        <rect x="10" y="28" width="6" height="14" fill="#336688"/>
+        <rect x="18" y="28" width="6" height="14" fill="#336688"/>
+        <rect x="9" y="41" width="7" height="5" fill="#224466"/>
+        <rect x="18" y="41" width="7" height="5" fill="#224466"/>
+        <text x="17" y="24" text-anchor="middle" font-size="5" fill="#00ffcc" font-family="monospace" font-weight="bold">AX</text>
+      </svg>
+    </div>
+
+    <div id="boss" style="position:absolute;bottom:93px;left:28px;z-index:3;">
+      <svg width="36" height="54" viewBox="0 0 36 54">
+        <rect x="12" y="0" width="14" height="12" fill="#ffd9a0" rx="1"/>
+        <rect x="10" y="2" width="18" height="10" fill="#ffe0b0" rx="1"/>
+        <rect x="11" y="5" width="6" height="4" fill="#ffe0b0"/>
+        <rect x="19" y="5" width="6" height="4" fill="#ffe0b0"/>
+        <rect x="13" y="8" width="10" height="2" fill="#cc9966"/>
+        <rect x="12" y="12" width="14" height="18" fill="#334499"/>
+        <rect x="15" y="14" width="5" height="6" fill="#fff" opacity="0.8"/>
+        <rect x="5" y="14" width="7" height="12" fill="#334499" rx="1"/>
+        <rect x="26" y="14" width="7" height="12" fill="#334499" rx="1"/>
+        <rect x="12" y="30" width="6" height="15" fill="#223377"/>
+        <rect x="20" y="30" width="6" height="15" fill="#223377"/>
+        <rect x="11" y="43" width="7" height="5" fill="#111"/>
+        <rect x="20" y="43" width="7" height="5" fill="#111"/>
+      </svg>
+    </div>
+
+    <div id="scanBeamEl" style="position:absolute;bottom:91px;left:293px;width:84px;height:8px;overflow:hidden;opacity:0;z-index:3;">
+      <div style="width:100%;height:100%;background:linear-gradient(90deg,transparent,#00ccff99,transparent);animation:scanBeam 1.4s ease-in-out infinite;"></div>
+    </div>
+
+  </div>
+
+  <div style="background:#080e1a;border-top:1px solid #1a3050;padding:7px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:9px;color:#1e4060;font-family:monospace;">PROOF SIGNALS:</span>
+    <span id="p1" style="font-size:8px;color:#334;font-family:monospace;padding:2px 6px;border:1px solid #1a3050;border-radius:2px;">hash.sha256</span>
+    <span id="p2" style="font-size:8px;color:#334;font-family:monospace;padding:2px 6px;border:1px solid #1a3050;border-radius:2px;">manifest.json</span>
+    <span id="p3" style="font-size:8px;color:#334;font-family:monospace;padding:2px 6px;border:1px solid #1a3050;border-radius:2px;">state.json</span>
+    <span id="p4" style="font-size:8px;color:#334;font-family:monospace;padding:2px 6px;border:1px solid #1a3050;border-radius:2px;">trust-report</span>
+    <span id="statsEl" style="font-size:8px;color:#0088aa;font-family:monospace;margin-left:auto;">pkgs: 0 | ok: 0 | faked: 0</span>
+  </div>
+
+  <div id="endBanner" style="background:#000810;border-top:2px solid #00ffcc;padding:10px 16px;text-align:center;display:none;">
+    <div style="font-size:10px;color:#4488aa;font-family:monospace;margin-bottom:3px;">Without provenance: guesswork.</div>
+    <div style="font-size:13px;color:#00ffcc;font-family:monospace;font-weight:bold;letter-spacing:1px;">With AXIOM: provably real.</div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const pkgLayer = document.getElementById('pkgLayer');
+  const rejectLayer = document.getElementById('rejectLayer');
+  const beltEl = document.getElementById('beltEl');
+  const scanSvgText = document.getElementById('scanSvgText');
+  const boardSvgText = document.getElementById('boardSvgText');
+  const pkgCountText = document.getElementById('pkgCountText');
+  const rejCountText = document.getElementById('rejCountText');
+  const villainEl = document.getElementById('villain');
+  const villainBubble = document.getElementById('villainBubble');
+  const scanBeamEl = document.getElementById('scanBeamEl');
+  const statsEl = document.getElementById('statsEl');
+  const proofEls = [document.getElementById('p1'),document.getElementById('p2'),document.getElementById('p3'),document.getElementById('p4')];
+  const endBanner = document.getElementById('endBanner');
+  const pkgCounterSvg = document.getElementById('pkgCounter');
+  const pkgCountTextSvg = document.getElementById('pkgCountText');
+  const rejCountTextSvg = document.getElementById('rejCountText');
+
+  const SCENE_W = 740;
+  const SPAWN_X = 680;
+  const DEST_X = 10;
+  const VILLAIN_ZONE_X = 420;
+  const SCAN_LEFT = 293;
+  const SCAN_RIGHT = 377;
+  const REJECT_X = 439;
+  const BELT_SPEED = 1.2;
+  const SPAWN_INTERVAL = 2200;
+
+  let beltOffset = 0;
+  let packages = [];
+  let totalSpawned = 0;
+  let totalVerified = 0;
+  let totalRejected = 0;
+  let lastSpawn = 0;
+  let villainActive = false;
+  let villainTarget = null;
+  let proofCycle = 0;
+  let lastProofTime = 0;
+  let boardVerified = false;
+  let boardTimer = 0;
+  let endShown = false;
+  let startTime = Date.now();
+
+  function makePkg(fake) {
+    const el = document.createElement('div');
+    const delta = fake ? (Math.random() > 0.5 ? '+0.0'+(1+Math.floor(Math.random()*3)) : '-0.0'+(1+Math.floor(Math.random()*2))) : '=0.00';
+    const val = (0.88 + Math.random()*0.06).toFixed(2);
+    el.style.cssText = `
+      position:absolute;
+      width:38px;height:32px;
+      background:${fake?'#161e38':'#122030'};
+      border:2px solid ${fake?'#2a3460':'#1e4060'};
+      border-radius:2px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      transition:box-shadow 0.3s;
+    `;
+    el.innerHTML = `
+      <div style="font-size:6px;color:#3a6080;font-family:monospace;">PKG-${String(totalSpawned+1).padStart(3,'0')}</div>
+      <div style="font-size:7px;font-family:monospace;font-weight:bold;color:${fake?'#cc4444':'#44aacc'};">v=${val}</div>
+      <div style="font-size:5px;font-family:monospace;color:${fake?'#662222':'#225544'};">Δ${delta}</div>
+      ${fake?`<div style="position:absolute;top:2px;right:2px;width:4px;height:4px;background:#cc2200;border-radius:1px;animation:glitchFlicker 1.1s infinite;"></div>`:'<div style="position:absolute;top:2px;right:2px;width:4px;height:4px;background:#00aa44;border-radius:1px;"></div>'}
+    `;
+    return el;
+  }
+
+  function spawnPkg(now) {
+    const fake = Math.random() < 0.65;
+    const el = makePkg(fake);
+    pkgLayer.appendChild(el);
+    const pkg = {
+      el, fake,
+      x: SPAWN_X,
+      state: 'moving',
+      scanStart: 0,
+      scanStep: 0,
+      rejectStart: 0,
+      delivered: false,
+      id: ++totalSpawned,
+      tampered: false,
+    };
+    el.style.left = pkg.x + 'px';
+    el.style.bottom = '0px';
+    packages.push(pkg);
+    pkgCounterSvg.textContent = String(totalSpawned).padStart(3,'0');
+  }
+
+  function activateProof(idx) {
+    proofEls.forEach((p,i)=>{
+      if(i<idx){p.style.color='#00ffcc';p.style.borderColor='#00ffcc44';p.style.background='#001a10';}
+      else if(i===idx){p.style.color='#00ffcc';p.style.borderColor='#00ffcc';p.style.background='#002218';}
+      else{p.style.color='#334';p.style.borderColor='#1a3050';p.style.background='transparent';}
+    });
+  }
+
+  function resetProofs() {
+    proofEls.forEach(p=>{p.style.color='#334';p.style.borderColor='#1a3050';p.style.background='transparent';});
+  }
+
+  let raf;
+  function loop(now) {
+    raf = requestAnimationFrame(loop);
+    const elapsed = now - startTime;
+
+    beltOffset = (beltOffset + BELT_SPEED) % 32;
+    beltEl.style.backgroundPositionX = (-beltOffset) + 'px';
+
+    if(now - lastSpawn > SPAWN_INTERVAL) {
+      spawnPkg(now);
+      lastSpawn = now;
+    }
+
+    let anyInScanZone = false;
+
+    for(let i = packages.length-1; i>=0; i--) {
+      const pkg = packages[i];
+      if(pkg.state === 'rejected' || pkg.state === 'done') continue;
+
+      if(pkg.state === 'moving') {
+        pkg.x -= BELT_SPEED;
+        pkg.el.style.left = pkg.x + 'px';
+
+        if(pkg.x < VILLAIN_ZONE_X + 20 && pkg.x > VILLAIN_ZONE_X - 40 && pkg.fake && !pkg.tampered) {
+          pkg.tampered = true;
+          villainEl.style.left = (pkg.x + 20) + 'px';
+          villainBubble.style.left = (pkg.x + 4) + 'px';
+          villainBubble.textContent = '✎';
+          villainActive = true;
+          setTimeout(()=>{ villainBubble.textContent='!'; villainActive = false; }, 600);
+        }
+
+        const pkgMid = pkg.x + 19;
+        if(pkgMid >= SCAN_LEFT && pkgMid <= SCAN_RIGHT) {
+          anyInScanZone = true;
+          if(pkg.scanStart === 0) {
+            pkg.scanStart = now;
+            pkg.state = 'scanning';
+            scanBeamEl.style.opacity = '1';
+          }
+        }
+      }
+
+      if(pkg.state === 'scanning') {
+        const scanElapsed = now - pkg.scanStart;
+        const step = Math.floor(scanElapsed / 320);
+        if(step !== pkg.scanStep) {
+          pkg.scanStep = step;
+          activateProof(Math.min(step, 3));
+        }
+        const labels = ['HASH CHK','MANIFEST','STATE.JSON','TRUST-RPT','VERIFIED!'];
+        scanSvgText.textContent = labels[Math.min(pkg.scanStep, 4)];
+
+        if(scanElapsed > 1400) {
+          if(pkg.fake) {
+            pkg.state = 'rejected';
+            pkg.el.style.border = '2px solid #cc2200';
+            pkg.el.style.background = '#1a0808';
+            pkg.el.style.boxShadow = '0 0 8px #cc220066';
+            pkg.el.style.left = REJECT_X + 'px';
+            const rEl = document.createElement('div');
+            rEl.style.cssText = `position:absolute;left:${REJECT_X-5}px;bottom:0;width:32px;height:26px;background:#1a0808;border:2px solid #cc2200;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ff4444;font-family:monospace;animation:rejectFall 0.8s ease-in forwards;`;
+            rEl.textContent = '✕';
+            rejectLayer.appendChild(rEl);
+            setTimeout(()=>rEl.remove(), 900);
+            setTimeout(()=>{ pkg.el.remove(); packages.splice(i,1); },200);
+            totalRejected++;
+            rejCountText.textContent = `rejected: ${totalRejected}`;
+          } else {
+            pkg.state = 'moving';
+            pkg.el.style.boxShadow = '0 0 10px #00ffcc, 0 0 20px #00ffcc66';
+            pkg.el.style.border = '2px solid #00ffcc';
+            pkg.el.style.background = '#001a10';
+            scanSvgText.textContent = 'VERIFIED!';
+            scanSvgText.style.fill = '#00ffcc';
+            boardSvgText.textContent = 'OK!';
+            boardSvgText.setAttribute('fill','#00ffcc');
+            boardVerified = true;
+            boardTimer = now;
+            totalVerified++;
+            pkgCountTextSvg.textContent = `received: ${totalVerified}`;
+            if(!endShown && totalVerified >= 2) {
+              endShown = true;
+              endBanner.style.display = 'block';
+            }
+          }
+          resetProofs();
+          scanBeamEl.style.opacity = '0';
+        }
+      }
+
+      if(pkg.state === 'moving' && pkg.x < DEST_X - 20) {
+        pkg.state = 'done';
+        pkg.el.remove();
+        packages.splice(i,1);
+      }
+    }
+
+    if(!anyInScanZone && packages.every(p=>p.state!=='scanning')) {
+      scanSvgText.textContent = 'SCANNING';
+    }
+
+    if(boardVerified && now - boardTimer > 2000) {
+      boardVerified = false;
+      boardSvgText.textContent = 'WAIT';
+      boardSvgText.setAttribute('fill','#334466');
+    }
+
+    statsEl.textContent = `pkgs: ${totalSpawned} | ok: ${totalVerified} | faked: ${totalRejected}`;
+  }
+
+  lastSpawn = performance.now() - SPAWN_INTERVAL;
+  requestAnimationFrame(loop);
+})();
+</script>

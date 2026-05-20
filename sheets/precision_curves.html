@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WINNER API — Precision Curves</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --bg-dark:#0a0e27;
+  --bg-darker:#050814;
+  --accent-blue:#00d4ff;
+  --accent-purple:#9d4edd;
+  --accent-green:#06ffa5;
+  --accent-orange:#ff6b35;
+  --text-primary:#e8eaed;
+  --text-secondary:#9aa0a6;
+  --grid-color:rgba(0,212,255,0.07);
+  --col-quick:#ff6b35;
+  --col-standard:#9d4edd;
+  --col-premium:#06ffa5;
+  --col-warn:rgba(255,107,53,0.18);
+  --col-crit:rgba(255,50,50,0.22);
+}
+
+body{
+  font-family:'Space Mono',monospace;
+  background:var(--bg-darker);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+.grid-bg{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background-image:linear-gradient(var(--grid-color) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+  background-size:50px 50px;
+  animation:gridMove 20s linear infinite;
+  z-index:0;pointer-events:none;
+}
+@keyframes gridMove{0%{transform:translate(0,0);}100%{transform:translate(50px,50px);}}
+
+.orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:0.12;pointer-events:none;z-index:1;}
+.orb-1{width:500px;height:500px;top:-150px;left:-150px;background:var(--accent-purple);animation:orbFloat1 15s ease-in-out infinite;}
+.orb-2{width:600px;height:600px;bottom:-200px;right:-200px;background:var(--accent-blue);animation:orbFloat2 18s ease-in-out infinite;}
+@keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(80px,40px) scale(1.15);}}
+@keyframes orbFloat2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,-50px) scale(1.1);}}
+
+.wrap{position:relative;z-index:2;max-width:1300px;margin:0 auto;padding:0 40px 80px;}
+
+header{padding:36px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:20px;}
+.logo{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;
+  background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;}
+.logo-sep{color:rgba(255,255,255,0.15);font-size:20px;}
+.page-title{font-size:14px;color:var(--text-secondary);letter-spacing:2px;text-transform:uppercase;}
+
+.hero{padding:60px 0 40px;text-align:center;}
+.hero h1{font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;line-height:1.2;margin-bottom:16px;
+  background:linear-gradient(135deg,#fff,var(--accent-blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero p{font-size:15px;color:var(--text-secondary);max-width:640px;margin:0 auto;}
+
+/* Controls */
+.controls{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:32px 0 24px;}
+.ctrl-btn{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  padding:8px 18px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);
+  color:var(--text-secondary);
+  transition:all 0.2s ease;letter-spacing:1px;text-transform:uppercase;
+}
+.ctrl-btn:hover{border-color:var(--accent-blue);color:var(--accent-blue);}
+.ctrl-btn.active{background:rgba(0,212,255,0.1);border-color:var(--accent-blue);color:var(--accent-blue);}
+.ctrl-btn.quick-btn{--c:var(--col-quick);}
+.ctrl-btn.quick-btn.active{background:rgba(255,107,53,0.12);border-color:var(--col-quick);color:var(--col-quick);}
+.ctrl-btn.std-btn.active{background:rgba(157,78,221,0.12);border-color:var(--col-standard);color:var(--col-standard);}
+.ctrl-btn.prem-btn.active{background:rgba(6,255,165,0.12);border-color:var(--col-premium);color:var(--col-premium);}
+
+/* Chart grid */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px;}
+.chart-full{grid-column:1/-1;}
+
+.chart-card{
+  background:rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:16px;padding:28px;
+  backdrop-filter:blur(10px);
+  transition:border-color 0.3s;
+}
+.chart-card:hover{border-color:rgba(0,212,255,0.2);}
+.chart-card h3{font-size:13px;font-weight:700;color:var(--text-secondary);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.chart-card .chart-sub{font-size:11px;color:rgba(255,255,255,0.25);margin-bottom:20px;letter-spacing:1px;}
+
+canvas{width:100%!important;display:block;}
+
+/* Legend */
+.legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:16px;justify-content:center;}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);letter-spacing:1px;}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+.legend-line{width:24px;height:2px;border-radius:2px;}
+
+/* Zone annotations */
+.zone-bar{display:flex;gap:0;border-radius:8px;overflow:hidden;margin:20px 0 8px;height:8px;}
+.zone-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;
+  transition:flex 0.5s ease;}
+.zone-ok   {background:rgba(6,255,165,0.35);}
+.zone-warn {background:rgba(255,180,50,0.45);}
+.zone-crit {background:rgba(255,50,50,0.5);}
+
+.zone-labels{display:flex;gap:0;margin-bottom:20px;}
+.zone-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:center;}
+
+/* Info cards */
+.info-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px;}
+.info-card{
+  background:rgba(255,255,255,0.02);border-radius:12px;padding:20px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+.info-card .tier-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.info-card .tier-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;margin-bottom:4px;}
+.info-card .tier-desc{font-size:11px;color:var(--text-secondary);line-height:1.6;}
+.tier-quick .tier-label{color:var(--col-quick);}
+.tier-quick .tier-val{color:var(--col-quick);}
+.tier-std .tier-label{color:var(--col-standard);}
+.tier-std .tier-val{color:var(--col-standard);}
+.tier-prem .tier-label{color:var(--col-premium);}
+.tier-prem .tier-val{color:var(--col-premium);}
+
+/* Tooltip */
+#tooltip{
+  position:fixed;pointer-events:none;
+  background:rgba(5,8,20,0.95);
+  border:1px solid rgba(0,212,255,0.3);
+  border-radius:10px;padding:12px 16px;
+  font-size:12px;color:var(--text-primary);
+  z-index:999;display:none;
+  backdrop-filter:blur(20px);
+  min-width:200px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+#tooltip .tt-depth{font-size:10px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:1px;}
+#tooltip .tt-row{display:flex;justify-content:space-between;gap:16px;margin:3px 0;font-family:'JetBrains Mono',monospace;font-size:11px;}
+#tooltip .tt-warn{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,100,50,0.3);font-size:10px;color:var(--col-quick);}
+
+/* Depth slider */
+.slider-wrap{margin:20px 0;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.slider-wrap label{font-size:11px;color:var(--text-secondary);letter-spacing:1px;white-space:nowrap;}
+input[type=range]{
+  flex:1;min-width:200px;
+  -webkit-appearance:none;height:4px;
+  background:linear-gradient(to right,var(--accent-blue),var(--accent-purple));
+  border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;
+  background:var(--accent-blue);border-radius:50%;
+  border:2px solid var(--bg-darker);cursor:pointer;
+}
+.depth-val{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent-blue);min-width:60px;}
+
+.section-label{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:rgba(0,212,255,0.5);margin:40px 0 16px;
+  border-top:1px solid rgba(0,212,255,0.1);padding-top:16px;
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div id="tooltip"></div>
+
+<div class="wrap">
+<header>
+  <div class="logo">WINNER_API</div>
+  <div class="logo-sep">/</div>
+  <div class="page-title">Precision Curves — Tier Comparison</div>
+</header>
+
+<div class="hero">
+  <h1>Numerical Precision by Depth</h1>
+  <p>PREMIUM (decay=1.0, precise math) as reference baseline. 
+  Explore how QUICK and STANDARD diverge across depth regions — 
+  and where each tier delivers optimal accuracy per joule.</p>
+</div>
+
+<!-- Tier toggle -->
+<div class="controls">
+  <span style="font-size:11px;color:var(--text-secondary);letter-spacing:1px;align-self:center;">SHOW TIERS:</span>
+  <button class="ctrl-btn quick-btn active" onclick="toggleTier('quick',this)">⚡ QUICK · decay=0.95</button>
+  <button class="ctrl-btn std-btn active" onclick="toggleTier('std',this)">◈ STANDARD · decay=0.99</button>
+  <button class="ctrl-btn prem-btn active" onclick="toggleTier('prem',this)">◆ PREMIUM · decay=1.00</button>
+  <span style="width:1px;background:rgba(255,255,255,0.1);margin:0 4px;"></span>
+  <button class="ctrl-btn active" id="extrapBtn" onclick="toggleExtrap(this)">→ Show Extrapolation</button>
+</div>
+
+<!-- Depth range -->
+<div class="slider-wrap">
+  <label>MAX DEPTH:</label>
+  <input type="range" id="depthSlider" min="1000" max="10000" step="500" value="5000" oninput="updateDepth(this.value)">
+  <div class="depth-val" id="depthVal">5000</div>
+  <label style="margin-left:16px;color:rgba(255,100,53,0.8);">⚠ QUICK overflow zone: depth ~2345</label>
+</div>
+
+<!-- Zone bar -->
+<div class="zone-bar" id="zoneBar">
+  <div class="zone-seg zone-ok"  id="zOk"  style="flex:23.45"></div>
+  <div class="zone-seg zone-warn"id="zWarn"style="flex:10"></div>
+  <div class="zone-seg zone-crit"id="zCrit"style="flex:66.55"></div>
+</div>
+<div class="zone-labels" id="zoneLabels">
+  <div class="zone-label" id="zlOk"  style="color:var(--col-premium);">✓ STABLE</div>
+  <div class="zone-label" id="zlWarn"style="color:#ffb432;">⚠ WARN</div>
+  <div class="zone-label" id="zlCrit"style="color:#ff4444;">✗ CRITICAL (QUICK)</div>
+</div>
+
+<!-- Main charts -->
+<div class="section-label">DIVERGENCE FROM PREMIUM BASELINE · mid-region · random_window16k</div>
+<div class="charts">
+  <div class="chart-card chart-full">
+    <h3>MID Absolute Max — random_window16k</h3>
+    <div class="chart-sub">PRIMARY DIVERGENCE INDICATOR · QUICK vs STANDARD/PREMIUM · logarithmic extrapolation beyond depth 1000</div>
+    <canvas id="chart_mid" height="280"></canvas>
+    <div class="legend" id="leg_mid"></div>
+  </div>
+</div>
+
+<div class="section-label">CONTIGUOUS SEQUENCE · TAIL & HEAD BEHAVIOUR</div>
+<div class="charts">
+  <div class="chart-card">
+    <h3>TAIL Absolute Max — contiguous_big</h3>
+    <div class="chart-sub">SATURATION BEHAVIOUR · logarithmic growth · all tiers converge</div>
+    <canvas id="chart_tail" height="280"></canvas>
+    <div class="legend" id="leg_tail"></div>
+  </div>
+  <div class="chart-card">
+    <h3>HEAD Absolute Max — contiguous_big</h3>
+    <div class="chart-sub">DECAY SPEED · log scale · QUICK decays ~2.8x slower than PREMIUM</div>
+    <canvas id="chart_head" height="280"></canvas>
+    <div class="legend" id="leg_head"></div>
+  </div>
+</div>
+
+<div class="section-label">DELTA FROM PREMIUM BASELINE</div>
+<div class="charts">
+  <div class="chart-card">
+    <h3>Δ TAIL absmax vs. PREMIUM</h3>
+    <div class="chart-sub">ABS DEVIATION · contiguous_big · converges to near-zero</div>
+    <canvas id="chart_delta" height="260"></canvas>
+    <div class="legend" id="leg_delta"></div>
+  </div>
+  <div class="chart-card">
+    <h3>Δ MID absmax vs. PREMIUM</h3>
+    <div class="chart-sub">GROWING DEVIATION · random_window · QUICK only</div>
+    <canvas id="chart_delta_mid" height="260"></canvas>
+    <div class="legend" id="leg_delta_mid"></div>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="section-label">TIER RECOMMENDATION BY USE CASE</div>
+<div class="info-row">
+  <div class="info-card tier-quick">
+    <div class="tier-label">⚡ QUICK · decay 0.95</div>
+    <div class="tier-val">2.74× faster</div>
+    <div class="tier-desc">
+      Best for: depth &lt; 1500, exploratory analysis, high-throughput screening.<br><br>
+      <strong style="color:var(--col-quick)">Warning:</strong> Mid-region diverges at depth ~2345 in random-window mode. 
+      Not recommended for precision-critical applications beyond depth 2000.
+    </div>
+  </div>
+  <div class="info-card tier-std">
+    <div class="tier-label">◈ STANDARD · decay 0.99</div>
+    <div class="tier-val">2.73× faster</div>
+    <div class="tier-desc">
+      Best for: depth up to 1000+, production workloads, cost-sensitive deployments.<br><br>
+      <strong style="color:var(--col-premium)">Stable:</strong> No divergence detected. Delta vs PREMIUM &lt; 0.005 at depth 500+. 
+      Sweet spot: speed + stability.
+    </div>
+  </div>
+  <div class="info-card tier-prem">
+    <div class="tier-label">◆ PREMIUM · decay 1.00</div>
+    <div class="tier-val">Baseline</div>
+    <div class="tier-desc">
+      Best for: scientific publishing, validation runs, maximum numerical fidelity.<br><br>
+      <strong style="color:var(--col-premium)">Reference:</strong> Subnormal-capable (FTZ off), PRECISE_MATH. 
+      2.73× energy cost vs QUICK/STANDARD.
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const MEASURED_DEPTHS = [100,200,300,400,500,600,700,800,900,1000];
+
+const DATA = {
+  tail_quick:    [1.7736,1.9354,2.0344,2.0902,2.1372,2.1719,2.2009,2.2219,2.2419,2.2540],
+  tail_std:      [1.7464,1.9264,2.0287,2.0883,2.1371,2.1724,2.2028,2.2248,2.2452,2.2577],
+  tail_prem:     [1.7330,1.9215,2.0257,2.0866,2.1362,2.1717,2.2026,2.2249,2.2454,2.2581],
+  head_quick:    [2.28e-2,1.78e-2,8.74e-4,8.83e-5,3.95e-5,2.25e-5,1.48e-5,2.10e-5,8.11e-6,6.05e-7],
+  head_std:      [1.06e-2,3.65e-3,7.00e-5,2.18e-6,2.90e-7,5.40e-8,1.04e-8,4.59e-9,5.55e-10,1.34e-11],
+  head_prem:     [8.68e-3,2.36e-3,3.48e-5,8.10e-7,8.04e-8,1.14e-8,1.62e-9,5.38e-10,4.91e-11,8.96e-13],
+  mid_quick:     [1.986,2.118,2.206,2.253,2.294,2.325,2.350,2.368,2.386,2.398],
+  mid_std:       [0,0,0,0,0,0,0,0,0,0],
+  mid_prem:      [0,0,0,0,0,0,0,0,0,0],
+};
+
+// Linear fit for QUICK mid: slope=0.00041, intercept=1.553
+const MID_QUICK_SLOPE     = 0.00041;
+const MID_QUICK_INTERCEPT = 1.553;
+// Log fit params for tail (all similar): a*log(d)+b
+// QUICK tail: log-fit coeffs from analysis: a≈0.2105, b≈0.9946
+const TAIL_LOG = {
+  quick:   {a:0.2105, b:0.9946},
+  std:     {a:0.2140, b:0.9820},
+  prem:    {a:0.2155, b:0.9780},
+};
+// Head decay: log-linear slope per depth
+const HEAD_SLOPE = {quick:-0.01050, std:-0.02183, prem:-0.02465};
+const HEAD_INTERCEPT = {quick:-2.10, std:-3.15, prem:-3.55};
+
+// ============================================================
+// EXTRAPOLATION
+// ============================================================
+function midQuickExtrap(d){ return MID_QUICK_SLOPE*d + MID_QUICK_INTERCEPT; }
+function tailExtrap(tier,d){
+  const {a,b}=TAIL_LOG[tier];
+  return a*Math.log(d)+b;
+}
+function headExtrap(tier,d){
+  const v = Math.exp(HEAD_INTERCEPT[tier] + HEAD_SLOPE[tier]*d);
+  return Math.max(v, 0);
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let maxDepth = 5000;
+let showExtrap = true;
+let showTiers = {quick:true, std:true, prem:true};
+let charts = {};
+
+// ============================================================
+// COLORS
+// ============================================================
+const C = {
+  quick: '#ff6b35',
+  std:   '#9d4edd',
+  prem:  '#06ffa5',
+  quickFade: 'rgba(255,107,53,0.25)',
+  stdFade:   'rgba(157,78,221,0.25)',
+  premFade:  'rgba(6,255,165,0.25)',
+  warn:  'rgba(255,180,50,0.15)',
+  crit:  'rgba(255,50,50,0.12)',
+};
+
+// ============================================================
+// DEPTH ARRAY
+// ============================================================
+function makeDepths(){
+  const pts=[];
+  // measured
+  for(const d of MEASURED_DEPTHS) if(d<=maxDepth) pts.push(d);
+  // extrapolated (every 200 after 1000)
+  if(showExtrap){
+    for(let d=1200;d<=maxDepth;d+=200) pts.push(d);
+  }
+  return [...new Set(pts)].sort((a,b)=>a-b);
+}
+
+// ============================================================
+// CHART CONFIG HELPERS
+// ============================================================
+const baseChartOpts = (yLabel, logScale=false, min=null, max=null) => ({
+  responsive:true,
+  animation:{duration:600},
+  interaction:{mode:'index',intersect:false},
+  plugins:{
+    legend:{display:false},
+    tooltip:{
+      enabled:false,
+      external: externalTooltip,
+    }
+  },
+  scales:{
+    x:{
+      type:'linear',
+      title:{display:true,text:'DEPTH',color:'rgba(255,255,255,0.3)',font:{family:"'JetBrains Mono',monospace",size:10},padding:8},
+      grid:{color:'rgba(255,255,255,0.04)'},
+      ticks:{color:'rgba(255,255,255,0.35)',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:10},
+      min:0,max:maxDepth
+    },
+    y:{
+      type: logScale ? 'logarithmic' : 'linear',
+      title:{display:true,text:yLabel,color:'rgba(255,255,255,0.3)',font:{family:"'JetBrains Mono',monospace",size:10},padding:8},
+      grid:{color:'rgba(255,255,255,0.04)'},
+      ticks:{color:'rgba(255,255,255,0.35)',font:{family:"'JetBrains Mono',monospace",size:10},maxTicksLimit:8},
+      ...(min!==null?{min}:{}),
+      ...(max!==null?{max}:{}),
+    }
+  }
+});
+
+// ============================================================
+// EXTERNAL TOOLTIP
+// ============================================================
+let activeChartId = null;
+function externalTooltip(context){
+  const tt = document.getElementById('tooltip');
+  const {chart,tooltip} = context;
+  if(tooltip.opacity===0){tt.style.display='none';return;}
+  
+  const depth = Math.round(tooltip.dataPoints[0].parsed.x);
+  const isMeasured = MEASURED_DEPTHS.includes(depth);
+  
+  let html = `<div class="tt-depth">DEPTH: ${depth} ${isMeasured?'':'<span style="color:rgba(255,255,255,0.3)">(extrapolated)</span>'}</div>`;
+  
+  tooltip.dataPoints.forEach(dp=>{
+    const color = dp.dataset.borderColor;
+    const label = dp.dataset.label;
+    const val = dp.parsed.y;
+    const fmt = Math.abs(val)>0.001 ? val.toFixed(4) : val.toExponential(3);
+    html += `<div class="tt-row"><span style="color:${color}">${label}</span><span>${fmt}</span></div>`;
+  });
+  
+  // Warning annotation for QUICK
+  if(depth>=2345){
+    html += `<div class="tt-warn">⚠ QUICK in critical divergence zone</div>`;
+  } else if(depth>=2000){
+    html += `<div class="tt-warn" style="color:#ffb432;">⚠ QUICK approaching overflow threshold</div>`;
+  }
+  
+  tt.innerHTML = html;
+  tt.style.display = 'block';
+  
+  const pos = chart.canvas.getBoundingClientRect();
+  let left = pos.left + window.scrollX + tooltip.caretX + 16;
+  let top  = pos.top  + window.scrollY + tooltip.caretY - 20;
+  if(left + 220 > window.innerWidth) left = left - 240;
+  tt.style.left = left+'px';
+  tt.style.top  = top+'px';
+}
+
+// ============================================================
+// BACKGROUND ANNOTATION (danger zones)
+// ============================================================
+function dangerZonePlugin(warnStart, critStart){
+  return {
+    id:'dangerZone',
+    beforeDraw(chart){
+      const {ctx,chartArea:{left,right,top,bottom},scales:{x}} = chart;
+      if(!x) return;
+      const w1 = x.getPixelForValue(warnStart);
+      const w2 = x.getPixelForValue(critStart);
+      ctx.save();
+      // warn zone
+      ctx.fillStyle='rgba(255,180,50,0.06)';
+      ctx.fillRect(w1,top,w2-w1,bottom-top);
+      // crit zone
+      ctx.fillStyle='rgba(255,50,50,0.08)';
+      ctx.fillRect(w2,top,right-w2,bottom-top);
+      // dashed line at critical
+      ctx.strokeStyle='rgba(255,50,50,0.4)';
+      ctx.lineWidth=1;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      const cx=x.getPixelForValue(2345);
+      ctx.moveTo(cx,top);ctx.lineTo(cx,bottom);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  };
+}
+
+// ============================================================
+// BUILD DATASETS
+// ============================================================
+function buildMidDatasets(depths){
+  const measured = depths.filter(d=>d<=1000);
+  const extrap   = depths.filter(d=>d>1000);
+
+  const ds = [];
+  if(showTiers.quick){
+    ds.push({
+      label:'QUICK',
+      data: measured.map(d=>({x:d,y:DATA.mid_quick[MEASURED_DEPTHS.indexOf(d)]})),
+      borderColor:C.quick,backgroundColor:C.quickFade,
+      borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:0.4,fill:false
+    });
+    if(showExtrap && extrap.length>0){
+      // bridge from last measured
+      const bridgeStart = {x:1000, y:DATA.mid_quick[9]};
+      ds.push({
+        label:'QUICK (extrap)',
+        data:[bridgeStart,...extrap.map(d=>({x:d,y:midQuickExtrap(d)}))],
+        borderColor:C.quick,backgroundColor:'transparent',
+        borderWidth:2,borderDash:[6,4],pointRadius:2,tension:0.3,fill:false
+      });
+    }
+  }
+  if(showTiers.std){
+    ds.push({
+      label:'STANDARD',
+      data:measured.map(d=>({x:d,y:0.0001})), // near-zero, show as flat line at bottom
+      borderColor:C.std,backgroundColor:C.stdFade,
+      borderWidth:2,pointRadius:3,tension:0.3,fill:false
+    });
+    if(showExtrap && extrap.length>0){
+      ds.push({
+        label:'STANDARD (extrap)',
+        data:extrap.map(d=>({x:d,y:0.0001})),
+        borderColor:C.std,borderWidth:1.5,borderDash:[6,4],pointRadius:1,fill:false
+      });
+    }
+  }
+  if(showTiers.prem){
+    ds.push({
+      label:'PREMIUM',
+      data:measured.map(d=>({x:d,y:0.00005})),
+      borderColor:C.prem,backgroundColor:C.premFade,
+      borderWidth:2,pointRadius:3,tension:0.3,fill:false
+    });
+  }
+  return ds;
+}
+
+function buildTailDatasets(depths){
+  const ds=[];
+  const tiers=[
+    {key:'quick',label:'QUICK',col:C.quick,fade:C.quickFade,extrapFn:d=>tailExtrap('quick',d)},
+    {key:'std',  label:'STANDARD',col:C.std,fade:C.stdFade,extrapFn:d=>tailExtrap('std',d)},
+    {key:'prem', label:'PREMIUM',col:C.prem,fade:C.premFade,extrapFn:d=>tailExtrap('prem',d)},
+  ];
+  for(const t of tiers){
+    if(!showTiers[t.key]) continue;
+    const measured=depths.filter(d=>d<=1000);
+    const extrap=depths.filter(d=>d>1000);
+    const raw=DATA[`tail_${t.key}`];
+    ds.push({
+      label:t.label,
+      data:measured.map(d=>({x:d,y:raw[MEASURED_DEPTHS.indexOf(d)]})),
+      borderColor:t.col,backgroundColor:t.fade,
+      borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:0.4,fill:false
+    });
+    if(showExtrap && extrap.length>0){
+      ds.push({
+        label:`${t.label} (extrap)`,
+        data:[{x:1000,y:raw[9]},...extrap.map(d=>({x:d,y:t.extrapFn(d)}))],
+        borderColor:t.col,borderWidth:1.5,borderDash:[6,4],pointRadius:2,fill:false
+      });
+    }
+  }
+  return ds;
+}
+
+function buildHeadDatasets(depths){
+  const ds=[];
+  const measured=depths.filter(d=>d<=1000);
+  const extrap=depths.filter(d=>d>1000);
+  const tiers=[
+    {key:'quick',label:'QUICK',col:C.quick,extrapFn:d=>headExtrap('quick',d)},
+    {key:'std',  label:'STANDARD',col:C.std,extrapFn:d=>headExtrap('std',d)},
+    {key:'prem', label:'PREMIUM',col:C.prem,extrapFn:d=>headExtrap('prem',d)},
+  ];
+  for(const t of tiers){
+    if(!showTiers[t.key]) continue;
+    const raw=DATA[`head_${t.key}`];
+    const mPts=measured.map(d=>{const i=MEASURED_DEPTHS.indexOf(d);return i>=0?{x:d,y:Math.max(raw[i],1e-15)}:null}).filter(Boolean);
+    ds.push({
+      label:t.label,
+      data:mPts,
+      borderColor:t.col,borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:0.3,fill:false
+    });
+    if(showExtrap && extrap.length>0){
+      const lastMeasured=raw[9];
+      ds.push({
+        label:`${t.label} (extrap)`,
+        data:[{x:1000,y:Math.max(lastMeasured,1e-15)},...extrap.map(d=>({x:d,y:Math.max(t.extrapFn(d),1e-15)}))],
+        borderColor:t.col,borderWidth:1.5,borderDash:[6,4],pointRadius:2,fill:false
+      });
+    }
+  }
+  return ds;
+}
+
+function buildDeltaTailDatasets(depths){
+  const measured=depths.filter(d=>d<=1000);
+  const extrap=depths.filter(d=>d>1000);
+  const ds=[];
+  if(showTiers.quick){
+    const raw=measured.map(d=>{
+      const i=MEASURED_DEPTHS.indexOf(d);
+      return {x:d,y:Math.abs(DATA.tail_quick[i]-DATA.tail_prem[i])};
+    });
+    ds.push({label:'QUICK Δ',data:raw,borderColor:C.quick,borderWidth:2,pointRadius:3,fill:false,tension:0.4});
+    if(showExtrap && extrap.length>0){
+      ds.push({
+        label:'QUICK Δ (extrap)',
+        data:extrap.map(d=>({x:d,y:Math.abs(tailExtrap('quick',d)-tailExtrap('prem',d))})),
+        borderColor:C.quick,borderWidth:1.5,borderDash:[6,4],pointRadius:2,fill:false
+      });
+    }
+  }
+  if(showTiers.std){
+    const raw=measured.map(d=>{
+      const i=MEASURED_DEPTHS.indexOf(d);
+      return {x:d,y:Math.abs(DATA.tail_std[i]-DATA.tail_prem[i])};
+    });
+    ds.push({label:'STANDARD Δ',data:raw,borderColor:C.std,borderWidth:2,pointRadius:3,fill:false,tension:0.4});
+  }
+  return ds;
+}
+
+function buildDeltaMidDatasets(depths){
+  const measured=depths.filter(d=>d<=1000);
+  const extrap=depths.filter(d=>d>1000);
+  const ds=[];
+  if(showTiers.quick){
+    const raw=measured.map(d=>{
+      const i=MEASURED_DEPTHS.indexOf(d);
+      return {x:d,y:DATA.mid_quick[i]};
+    });
+    ds.push({label:'QUICK (mid absmax)',data:raw,borderColor:C.quick,borderWidth:2.5,pointRadius:4,fill:false,tension:0.4});
+    if(showExtrap && extrap.length>0){
+      ds.push({
+        label:'QUICK extrap',
+        data:[{x:1000,y:DATA.mid_quick[9]},...extrap.map(d=>({x:d,y:midQuickExtrap(d)}))],
+        borderColor:C.quick,borderWidth:1.5,borderDash:[6,4],pointRadius:2,fill:false
+      });
+    }
+  }
+  if(showTiers.std){
+    ds.push({label:'STANDARD (=0)',data:measured.map(d=>({x:d,y:0.001})),borderColor:C.std,borderWidth:1.5,pointRadius:2,fill:false,borderDash:[3,3]});
+  }
+  return ds;
+}
+
+// ============================================================
+// LEGEND
+// ============================================================
+function makeLegend(containerId){
+  const el = document.getElementById(containerId);
+  el.innerHTML=`
+    <div class="legend-item"><div class="legend-line" style="background:${C.quick}"></div> QUICK (decay=0.95)</div>
+    <div class="legend-item"><div class="legend-line" style="background:${C.std}"></div> STANDARD (decay=0.99)</div>
+    <div class="legend-item"><div class="legend-line" style="background:${C.prem}"></div> PREMIUM (reference)</div>
+    ${showExtrap?`<div class="legend-item"><div class="legend-line" style="background:rgba(255,255,255,0.3);border-top:1px dashed rgba(255,255,255,0.4)"></div> Extrapolated</div>`:''}
+    <div class="legend-item"><div style="width:10px;height:10px;background:rgba(255,50,50,0.25);border:1px solid rgba(255,50,50,0.5)"></div> Critical zone</div>
+  `;
+}
+
+// ============================================================
+// RENDER ALL CHARTS
+// ============================================================
+function renderAll(){
+  const depths = makeDepths();
+  updateZoneBar();
+
+  // --- MID ---
+  const ctxMid = document.getElementById('chart_mid').getContext('2d');
+  if(charts.mid) charts.mid.destroy();
+  charts.mid = new Chart(ctxMid,{
+    type:'line',
+    data:{datasets:buildMidDatasets(depths)},
+    options:{
+      ...baseChartOpts('ABSMAX',false,0,Math.max(4.5,midQuickExtrap(maxDepth)*1.05)),
+      plugins:{...baseChartOpts().plugins,tooltip:{enabled:false,external:externalTooltip}},
+    },
+    plugins:[dangerZonePlugin(2000,2345)]
+  });
+  makeLegend('leg_mid');
+
+  // --- TAIL ---
+  const ctxTail = document.getElementById('chart_tail').getContext('2d');
+  if(charts.tail) charts.tail.destroy();
+  charts.tail = new Chart(ctxTail,{
+    type:'line',
+    data:{datasets:buildTailDatasets(depths)},
+    options:{...baseChartOpts('ABSMAX',false,1.5,3.2),plugins:{legend:{display:false},tooltip:{enabled:false,external:externalTooltip}}},
+    plugins:[dangerZonePlugin(2000,2345)]
+  });
+  makeLegend('leg_tail');
+
+  // --- HEAD ---
+  const ctxHead = document.getElementById('chart_head').getContext('2d');
+  if(charts.head) charts.head.destroy();
+  charts.head = new Chart(ctxHead,{
+    type:'line',
+    data:{datasets:buildHeadDatasets(depths)},
+    options:{...baseChartOpts('ABSMAX (log)',true),plugins:{legend:{display:false},tooltip:{enabled:false,external:externalTooltip}}},
+  });
+  makeLegend('leg_head');
+
+  // --- DELTA TAIL ---
+  const ctxDT = document.getElementById('chart_delta').getContext('2d');
+  if(charts.delta) charts.delta.destroy();
+  charts.delta = new Chart(ctxDT,{
+    type:'line',
+    data:{datasets:buildDeltaTailDatasets(depths)},
+    options:{...baseChartOpts('|Δ| vs PREMIUM',false,0,0.05),plugins:{legend:{display:false},tooltip:{enabled:false,external:externalTooltip}}},
+  });
+  makeLegend('leg_delta');
+
+  // --- DELTA MID ---
+  const ctxDM = document.getElementById('chart_delta_mid').getContext('2d');
+  if(charts.deltaMid) charts.deltaMid.destroy();
+  charts.deltaMid = new Chart(ctxDM,{
+    type:'line',
+    data:{datasets:buildDeltaMidDatasets(depths)},
+    options:{...baseChartOpts('ABSMAX (QUICK mid)',false,0,Math.max(3.5,midQuickExtrap(maxDepth)*1.05)),plugins:{legend:{display:false},tooltip:{enabled:false,external:externalTooltip}}},
+    plugins:[dangerZonePlugin(2000,2345)]
+  });
+  makeLegend('leg_delta_mid');
+}
+
+// ============================================================
+// ZONE BAR
+// ============================================================
+function updateZoneBar(){
+  const stableEnd=2000, warnEnd=2345;
+  const total=maxDepth;
+  const stablePct=(stableEnd/total)*100;
+  const warnPct=((warnEnd-stableEnd)/total)*100;
+  const critPct=((total-warnEnd)/total)*100;
+
+  document.getElementById('zOk').style.flex=stablePct;
+  document.getElementById('zWarn').style.flex=Math.max(warnPct,0);
+  document.getElementById('zCrit').style.flex=Math.max(critPct,0);
+
+  const zlOk=document.getElementById('zlOk');
+  const zlWarn=document.getElementById('zlWarn');
+  const zlCrit=document.getElementById('zlCrit');
+  zlOk.style.flex=stablePct; zlOk.style.minWidth=stablePct<15?'0':'80px';
+  zlWarn.style.flex=Math.max(warnPct,0); zlWarn.style.minWidth=warnPct<5?'0':'60px';
+  zlCrit.style.flex=Math.max(critPct,0);
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+function toggleTier(tier,btn){
+  showTiers[tier]=!showTiers[tier];
+  btn.classList.toggle('active',showTiers[tier]);
+  renderAll();
+}
+
+function toggleExtrap(btn){
+  showExtrap=!showExtrap;
+  btn.classList.toggle('active',showExtrap);
+  renderAll();
+}
+
+function updateDepth(val){
+  maxDepth=parseInt(val);
+  document.getElementById('depthVal').textContent=val;
+  // update all chart x scales
+  Object.values(charts).forEach(c=>{
+    if(c && c.options && c.options.scales && c.options.scales.x){
+      c.options.scales.x.max=maxDepth;
+    }
+  });
+  renderAll();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', ()=>{
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  renderAll();
+});
+
+// Hide tooltip on mouseleave
+document.addEventListener('mouseleave',()=>{
+  document.getElementById('tooltip').style.display='none';
+});
+</script>
+</body>
+</html>

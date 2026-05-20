@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIOM · Training Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #040810;
+  --bg1:      #080d1a;
+  --bg2:      #0c1225;
+  --bg3:      #121933;
+  --border:   #1a2540;
+  --border2:  #253560;
+  --text:     #c0d0e8;
+  --text2:    #6878a0;
+  --text3:    #3a4870;
+  --cyan:     #00ccff;
+  --cyan2:    #0088bb;
+  --green:    #00f088;
+  --amber:    #ffaa00;
+  --red:      #ff2244;
+  --purple:   #9966ff;
+  --h0:       #6699ff;
+  --h1:       #ff8855;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+#header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Teko', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.logo span { color: var(--text2); font-weight: 400; font-size: 14px; letter-spacing: 2px; margin-left: 8px; vertical-align: middle; }
+
+.header-sep { width: 1px; height: 32px; background: var(--border2); }
+
+.conn-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.conn-btn:hover { border-color: var(--cyan2); color: var(--cyan); background: var(--bg3); }
+.conn-btn.connected { border-color: var(--green); color: var(--green); }
+.conn-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.conn-btn.connected .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+
+.refresh-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+}
+.refresh-info .countdown { color: var(--cyan); }
+
+#refresh-btn {
+  padding: 5px 12px;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all .15s;
+}
+#refresh-btn:hover { border-color: var(--cyan2); color: var(--cyan); }
+
+/* ── STATS BAR ── */
+#stats-bar {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-cell {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--bg1);
+  min-width: 0;
+}
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: 'Teko', sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+}
+.stat-value.green { color: var(--green); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.red { color: var(--red); }
+.stat-value.cyan { color: var(--cyan); }
+.stat-sub {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* ── MAIN LAYOUT ── */
+#main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 0;
+  height: calc(100vh - 110px);
+}
+
+/* ── LEFT: GRID + CHARTS ── */
+#left-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+/* PUZZLE GRID */
+#grid-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg1);
+  flex-shrink: 0;
+}
+.section-title {
+  font-family: 'Teko', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.legend {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+}
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 2px;
+}
+
+#grid-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+}
+
+#grid-container::-webkit-scrollbar { width: 4px; }
+#grid-container::-webkit-scrollbar-track { background: var(--bg1); }
+#grid-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* SAMPLE TILE */
+.tile {
+  width: 88px;
+  height: 80px;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+  flex-shrink: 0;
+}
+
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .12;
+  border-radius: 3px;
+}
+
+.tile.correct { background: rgba(0,240,136,.08); border-color: rgba(0,240,136,.25); }
+.tile.correct::before { background: var(--green); }
+.tile.unresolved { background: rgba(255,170,0,.08); border-color: rgba(255,170,0,.2); }
+.tile.unresolved::before { background: var(--amber); }
+.tile.error { background: rgba(255,34,68,.1); border-color: rgba(255,34,68,.25); }
+.tile.error::before { background: var(--red); }
+.tile.pending { background: rgba(255,255,255,.03); border-color: var(--border); }
+
+.tile:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+.tile.correct:hover { box-shadow: 0 0 16px rgba(0,240,136,.3); border-color: var(--green); }
+.tile.unresolved:hover { box-shadow: 0 0 16px rgba(255,170,0,.25); border-color: var(--amber); }
+.tile.error:hover { box-shadow: 0 0 16px rgba(255,34,68,.3); border-color: var(--red); }
+.tile.selected { transform: scale(1.05); z-index: 10; outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.class-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.class-badge.h0 { background: rgba(102,153,255,.2); color: var(--h0); }
+.class-badge.h1 { background: rgba(255,136,85,.2); color: var(--h1); }
+
+.snr-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text3);
+}
+
+.tile-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text3);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-verdict {
+  font-family: 'Teko', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tile.correct .tile-verdict { color: var(--green); }
+.tile.unresolved .tile-verdict { color: var(--amber); }
+.tile.error .tile-verdict { color: var(--red); }
+.tile.pending .tile-verdict { color: var(--text3); }
+
+.reward-bar-bg {
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.reward-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .3s;
+}
+.tile.correct .reward-bar-fill { background: var(--green); }
+.tile.unresolved .reward-bar-fill { background: var(--amber); }
+.tile.error .reward-bar-fill { background: var(--red); }
+.tile.pending .reward-bar-fill { background: var(--text3); }
+
+.tile-reward-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--text3);
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* CHARTS AREA */
+#charts-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  height: 170px;
+  flex-shrink: 0;
+}
+
+.chart-panel {
+  background: var(--bg1);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chart-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+canvas {
+  flex: 1;
+  width: 100% !important;
+  display: block;
+}
+
+/* ── RIGHT PANEL ── */
+#right-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg1);
+}
+
+#detail-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.detail-title {
+  font-family: 'Teko', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+.detail-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+#detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+#detail-body::-webkit-scrollbar { width: 3px; }
+#detail-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+  gap: 8px;
+}
+.detail-empty .arrow { font-size: 24px; color: var(--border2); }
+
+.detail-section {
+  margin-bottom: 16px;
+}
+.detail-section-title {
+  font-family: 'Teko', sans-serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.detail-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text3);
+}
+.detail-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text);
+  text-align: right;
+  max-width: 60%;
+  word-break: break-all;
+}
+.detail-val.green { color: var(--green); }
+.detail-val.amber { color: var(--amber); }
+.detail-val.red { color: var(--red); }
+.detail-val.cyan { color: var(--cyan); }
+
+/* p-value mini bars */
+.pval-row { margin-bottom: 5px; }
+.pval-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text3);
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+.pval-bar-bg { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.pval-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* ── EMPTY STATE ── */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 50px);
+  gap: 24px;
+  padding: 40px;
+}
+
+.empty-logo {
+  font-family: 'Teko', sans-serif;
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: 12px;
+  color: var(--border2);
+  text-align: center;
+}
+
+.empty-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.empty-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.big-conn-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-align: left;
+}
+.big-conn-btn:hover { border-color: var(--cyan2); color: var(--cyan); background: var(--bg3); }
+.big-conn-btn.connected { border-color: var(--green); }
+.big-conn-btn .icon { font-size: 20px; }
+.big-conn-btn .info { flex: 1; }
+.big-conn-btn .info-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; }
+.big-conn-btn .info-path { font-size: 10px; color: var(--green); word-break: break-all; }
+
+.start-btn {
+  padding: 14px;
+  background: var(--cyan2);
+  border: none;
+  border-radius: 6px;
+  color: #001820;
+  font-family: 'Teko', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: all .2s;
+  text-transform: uppercase;
+}
+.start-btn:hover { background: var(--cyan); }
+.start-btn:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; }
+
+/* notify */
+#notify {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  opacity: 0;
+  transition: opacity .3s;
+  z-index: 999;
+  pointer-events: none;
+}
+#notify.show { opacity: 1; }
+
+.verdict-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.verdict-chip.correct { background: rgba(0,240,136,.15); color: var(--green); }
+.verdict-chip.unresolved { background: rgba(255,170,0,.15); color: var(--amber); }
+.verdict-chip.error { background: rgba(255,34,68,.15); color: var(--red); }
+
+.timing-bar {
+  height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  gap: 1px;
+  margin: 4px 0;
+}
+.timing-seg { height: 100%; border-radius: 1px; }
+</style>
+</head>
+<body>
+
+<div id="notify"></div>
+
+<!-- EMPTY STATE -->
+<div id="empty-state">
+  <div class="empty-logo">AXIOM</div>
+  <div class="empty-sub">TRAINING COCKPIT · SIGNAL DETECTION MONITOR</div>
+  <div class="empty-connect">
+    <button class="big-conn-btn" id="btn-training" onclick="connectDir('training')">
+      <span class="icon">📂</span>
+      <div class="info">
+        <div class="info-label">TRAINING DATA DIRECTORY</div>
+        <div id="training-path" class="info-path">not connected</div>
+      </div>
+    </button>
+    <button class="big-conn-btn" id="btn-run" onclick="connectDir('run')">
+      <span class="icon">📊</span>
+      <div class="info">
+        <div class="info-label">RUN OUTPUT DIRECTORY</div>
+        <div id="run-path" class="info-path">not connected</div>
+      </div>
+    </button>
+    <button class="start-btn" id="start-btn" disabled onclick="startDashboard()">LAUNCH COCKPIT</button>
+  </div>
+  <div class="empty-sub" style="font-size:10px;color:var(--text3)">Requires Chrome/Edge · File System Access API</div>
+</div>
+
+<!-- DASHBOARD (hidden until loaded) -->
+<div id="dashboard" style="display:none">
+
+<div id="header">
+  <div class="logo">AXIOM <span>TRAINING MONITOR</span></div>
+  <div class="header-sep"></div>
+  <button class="conn-btn" id="hdr-training" onclick="connectDir('training')">
+    <div class="dot"></div> TRAINING DATA
+  </button>
+  <button class="conn-btn" id="hdr-run" onclick="connectDir('run')">
+    <div class="dot"></div> RUN OUTPUT
+  </button>
+  <div class="header-right">
+    <div class="refresh-info">REFRESH IN <span class="countdown" id="countdown">—</span>s</div>
+    <button id="refresh-btn" onclick="refreshData()">↻ NOW</button>
+  </div>
+</div>
+
+<div id="stats-bar">
+  <div class="stat-cell">
+    <div class="stat-label">Overall Acc</div>
+    <div class="stat-value" id="s-acc">—</div>
+    <div class="stat-sub" id="s-acc-sub">correct / total</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">H0 Specificity</div>
+    <div class="stat-value" id="s-h0">—</div>
+    <div class="stat-sub" id="s-h0-sub">noise rejected</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">H1 Sensitivity</div>
+    <div class="stat-value" id="s-h1">—</div>
+    <div class="stat-sub" id="s-h1-sub">signal detected</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Avg Reward</div>
+    <div class="stat-value cyan" id="s-reward">—</div>
+    <div class="stat-sub" id="s-reward-sub">best candidates</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Avg mean_p</div>
+    <div class="stat-value" id="s-mp">—</div>
+    <div class="stat-sub" id="s-mp-sub">H0 vs H1</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Samples</div>
+    <div class="stat-value cyan" id="s-total">—</div>
+    <div class="stat-sub" id="s-total-sub">in run</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Avg Time</div>
+    <div class="stat-value" id="s-time">—</div>
+    <div class="stat-sub">s / sample</div>
+  </div>
+</div>
+
+<div id="main">
+  <!-- LEFT -->
+  <div id="left-panel">
+    <div id="grid-header">
+      <div class="section-title">Sample Puzzle</div>
+      <div style="margin-left:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)" id="grid-filter-info">all samples</div>
+      <div class="legend" style="margin-left:auto">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Correct</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Unresolved</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Error</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--border2)"></div> Pending</div>
+      </div>
+    </div>
+    <div id="grid-container"></div>
+    <div id="charts-area">
+      <div class="chart-panel">
+        <div class="chart-title">Reward · per sample</div>
+        <canvas id="chart-reward"></canvas>
+      </div>
+      <div class="chart-panel">
+        <div class="chart-title">Timing · s/sample (phase1 / binary / staging)</div>
+        <canvas id="chart-timing"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right-panel">
+    <div id="detail-header">
+      <div class="detail-title" id="detail-name">SELECT A TILE</div>
+      <div class="detail-sub" id="detail-meta">click any sample to inspect</div>
+    </div>
+    <div id="detail-body">
+      <div class="detail-empty">
+        <div class="arrow">←</div>
+        <div>Click any sample tile<br>to view diagnostics</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end dashboard -->
+
+<script>
+// ── STATE ──
+let handles = { training: null, run: null };
+let connPaths = { training: null, run: null };
+let samples = [];
+let selectedId = null;
+let refreshTimer = null;
+let countdown = 0;
+const REFRESH_INTERVAL = 15;
+
+// ── NOTIFY ──
+function notify(msg, duration=2000) {
+  const el = document.getElementById('notify');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ── CONNECT ──
+async function connectDir(type) {
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'read' });
+    handles[type] = handle;
+    connPaths[type] = handle.name;
+
+    // update empty state buttons
+    document.getElementById(`${type}-path`).textContent = handle.name;
+    document.getElementById(`btn-${type}`).classList.add('connected');
+
+    // update header buttons if dashboard visible
+    const hdr = document.getElementById(`hdr-${type}`);
+    if (hdr) { hdr.classList.add('connected'); hdr.textContent = ''; hdr.innerHTML = `<div class="dot"></div> ${handle.name.substring(0,20)}`; }
+
+    notify(`✓ Connected: ${handle.name}`);
+    checkStartEnabled();
+  } catch(e) {
+    if (e.name !== 'AbortError') notify('Connection failed: ' + e.message);
+  }
+}
+
+function checkStartEnabled() {
+  const btn = document.getElementById('start-btn');
+  if (btn) btn.disabled = !(handles.training && handles.run);
+}
+
+async function startDashboard() {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  updateHeaderButtons();
+  await refreshData();
+  startAutoRefresh();
+}
+
+function updateHeaderButtons() {
+  ['training','run'].forEach(t => {
+    const el = document.getElementById(`hdr-${t}`);
+    if (!el) return;
+    if (handles[t]) {
+      el.classList.add('connected');
+      el.innerHTML = `<div class="dot"></div> ${handles[t].name.substring(0,18)}`;
+    }
+  });
+}
+
+// ── AUTO-REFRESH ──
+function startAutoRefresh() {
+  countdown = REFRESH_INTERVAL;
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    countdown--;
+    document.getElementById('countdown').textContent = countdown;
+    if (countdown <= 0) { refreshData(); countdown = REFRESH_INTERVAL; }
+  }, 1000);
+}
+
+async function refreshData() {
+  countdown = REFRESH_INTERVAL;
+  document.getElementById('countdown').textContent = countdown;
+  try {
+    await loadRunData();
+    render();
+    notify('↻ Refreshed', 1500);
+  } catch(e) {
+    notify('Error: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── FILE READING ──
+async function readFile(dirHandle, name) {
+  try {
+    const fh = await dirHandle.getFileHandle(name);
+    const f = await fh.getFile();
+    return await f.text();
+  } catch { return null; }
+}
+
+async function findFile(dirHandle, patterns) {
+  const files = [];
+  for await (const [name] of dirHandle.entries()) files.push(name);
+  for (const p of patterns) {
+    const match = files.find(f => f.match(p));
+    if (match) return { name: match, content: await readFile(dirHandle, match) };
+  }
+  return null;
+}
+
+async function findAllFiles(dirHandle, pattern) {
+  const matches = [];
+  for await (const [name] of dirHandle.entries()) {
+    if (name.match(pattern)) matches.push(name);
+  }
+  return matches;
+}
+
+// ── PARSERS ──
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = vals[i] ? vals[i].trim() : ''; });
+    return obj;
+  });
+}
+
+function parseJSONL(text) {
+  return text.trim().split('\n').filter(l => l.trim()).map(l => {
+    try { return JSON.parse(l); } catch { return null; }
+  }).filter(Boolean);
+}
+
+// ── LOAD RUN DATA ──
+async function loadRunData() {
+  if (!handles.run) return;
+
+  // Try to find sample_diagnostics.jsonl first (most detailed)
+  let diagData = null;
+  const diagFile = await findFile(handles.run, [/sample_diagnostics.*\.jsonl$/i, /audit.*\.jsonl$/i, /.*\.jsonl$/i]);
+  if (diagFile) {
+    diagData = parseJSONL(diagFile.content);
+  }
+
+  // Also try CSV
+  let csvData = null;
+  const csvFile = await findFile(handles.run, [/dataset.*\.csv$/i, /.*_v\d+\.csv$/i, /.*\.csv$/i]);
+  if (csvFile) {
+    csvData = parseCSV(csvFile.content);
+  }
+
+  // Try summary JSON
+  let summaryData = null;
+  const sumFile = await findFile(handles.run, [/.*summary.*\.json$/i]);
+  if (sumFile) {
+    try { summaryData = JSON.parse(sumFile.content); } catch {}
+  }
+
+  // Try subdirectory: sample_diagnostics/
+  let subDiagData = null;
+  try {
+    const subDir = await handles.run.getDirectoryHandle('sample_diagnostics');
+    const jsonlFiles = await findAllFiles(subDir, /\.jsonl$/i);
+    const jsonFiles = await findAllFiles(subDir, /\.json$/i);
+    const allItems = [];
+    for (const fn of [...jsonlFiles, ...jsonFiles]) {
+      const content = await readFile(subDir, fn);
+      if (!content) continue;
+      if (fn.endsWith('.jsonl')) {
+        allItems.push(...parseJSONL(content));
+      } else {
+        try { const j = JSON.parse(content); allItems.push(j); } catch {}
+      }
+    }
+    if (allItems.length) subDiagData = allItems;
+  } catch {}
+
+  // Merge data sources
+  const sampleMap = {};
+
+  // From CSV (baseline)
+  if (csvData) {
+    csvData.forEach(row => {
+      const id = row.case_id;
+      if (!id) return;
+      sampleMap[id] = {
+        case_id: id,
+        ground_truth_class: row.ground_truth_class || '',
+        snr: parseFloat(row.ground_truth_snr) || 0,
+        signal_type: row.ground_truth_signal_type || '',
+        noise_type: row.ground_truth_noise_type || '',
+        seq_len: parseInt(row.ground_truth_seq_len) || 0,
+        channels: parseInt(row.ground_truth_channels) || 0,
+        verdict: row.verdict || '',
+        runtime_verdict: row.runtime_verdict || '',
+        reward: parseFloat(row.reward) || 0,
+        mean_p: parseFloat(row.mean_p) || 1,
+        loc_score: parseFloat(row.loc_score) || 0,
+        success: row.synthetic_success_flag === '1' || row.synthetic_success_flag === 'True' || row.synthetic_success_flag === '1.0',
+        elapsed_s: null,
+        phase1_s: null,
+        staging_s: null,
+        binary_s: null,
+        p_values: null,
+        host_metrics: null,
+        bus_params: null,
+      };
+    });
+  }
+
+  // From summary JSON cases
+  if (summaryData && summaryData.cases) {
+    summaryData.cases.forEach(c => {
+      const id = c.case_id;
+      if (!sampleMap[id]) sampleMap[id] = { case_id: id };
+      Object.assign(sampleMap[id], {
+        ground_truth_class: c.ground_truth_class || sampleMap[id].ground_truth_class || '',
+        verdict: c.verdict || sampleMap[id].verdict || '',
+        runtime_verdict: c.runtime_verdict || sampleMap[id].runtime_verdict || '',
+        reward: c.reward || sampleMap[id].reward || 0,
+        mean_p: c.mean_p || sampleMap[id].mean_p || 1,
+        loc_score: c.loc_score || sampleMap[id].loc_score || 0,
+        success: c.synthetic_success_flag === true || c.synthetic_success_flag === 1 || sampleMap[id].success,
+      });
+    });
+  }
+
+  // From JSONL diagnostics (most detailed)
+  const diagItems = diagData || subDiagData || [];
+  diagItems.forEach(d => {
+    const id = d.case_id || d.sample_id;
+    if (!id) return;
+    if (!sampleMap[id]) sampleMap[id] = { case_id: id };
+    const s = sampleMap[id];
+    s.elapsed_s = d.elapsed_s || s.elapsed_s;
+    s.phase1_s = d.phase1_s || s.phase1_s;
+    s.staging_s = d.staging_s || s.staging_s;
+    s.binary_s = d.binary_total_s || s.binary_s;
+    s.ground_truth_class = d.class || s.ground_truth_class || '';
+    s.snr = d.snr || s.snr || 0;
+    s.signal_type = d.signal_type || s.signal_type || '';
+    s.noise_type = d.noise_type || s.noise_type || '';
+    s.verdict = d.verdict || s.verdict || '';
+    s.runtime_verdict = d.runtime_verdict || s.runtime_verdict || '';
+    s.reward = d.reward_total || s.reward || 0;
+    s.mean_p = d.mean_p || s.mean_p || 1;
+    s.loc_score = d.loc_score || s.loc_score || 0;
+    s.mean_p_source = d.mean_p_source;
+    s.p_keys_present = d.p_keys_present;
+    s.p_keys_missing = d.p_keys_missing;
+    if (d.best_candidate_p_values) {
+      s.p_values = d.best_candidate_p_values.mapped || d.best_candidate_p_values;
+    }
+    if (d.reward_components) s.reward_components = d.reward_components;
+    if (d.bus_parameters) s.bus_params = d.bus_parameters;
+    if (d.best_candidate && d.best_candidate.p_value_quality) {
+      s.p_values = d.best_candidate.p_value_quality.mapped_p_values || s.p_values;
+    }
+    // host metrics
+    if (d.best_candidate && d.best_candidate.host_metrics) {
+      s.host_metrics = d.best_candidate.host_metrics;
+    }
+  });
+
+  samples = Object.values(sampleMap);
+  // Sort by case_id
+  samples.sort((a, b) => a.case_id.localeCompare(b.case_id));
+}
+
+// ── STATUS CLASSIFICATION ──
+function getStatus(s) {
+  const cls = (s.ground_truth_class || '').toLowerCase();
+  const v = (s.verdict || s.runtime_verdict || '').toUpperCase();
+  if (!v) return 'pending';
+
+  if (cls === 'h1') {
+    if (v === 'PROMISING' || v === 'WEAK BUT STABLE') return 'correct';
+    if (v === 'UNRESOLVED') return 'unresolved';
+    if (v === 'LIKELY ARTIFACT') return 'error';
+  } else if (cls === 'h0') {
+    if (v === 'LIKELY ARTIFACT') return 'correct';
+    if (v === 'UNRESOLVED') return 'unresolved';
+    if (v === 'PROMISING' || v === 'WEAK BUT STABLE') return 'error';
+  }
+  return v === 'UNRESOLVED' ? 'unresolved' : 'pending';
+}
+
+function verdictShort(v) {
+  if (!v) return '—';
+  const m = {
+    'PROMISING': 'PROMISING',
+    'WEAK BUT STABLE': 'STABLE',
+    'UNRESOLVED': 'UNRESLVD',
+    'LIKELY ARTIFACT': 'ARTIFACT',
+  };
+  return m[v.toUpperCase()] || v.substring(0,8).toUpperCase();
+}
+
+// ── STATS ──
+function calcStats() {
+  const total = samples.length;
+  if (!total) return null;
+
+  const h0 = samples.filter(s => s.ground_truth_class === 'h0');
+  const h1 = samples.filter(s => s.ground_truth_class === 'h1');
+
+  const correct = samples.filter(s => getStatus(s) === 'correct').length;
+  const h0correct = h0.filter(s => getStatus(s) === 'correct').length;
+  const h1correct = h1.filter(s => getStatus(s) === 'correct').length;
+
+  const rewards = samples.filter(s => s.reward).map(s => s.reward);
+  const mps = samples.filter(s => s.mean_p != null).map(s => s.mean_p);
+  const times = samples.filter(s => s.elapsed_s).map(s => s.elapsed_s);
+  const h0mp = h0.filter(s=>s.mean_p!=null).map(s=>s.mean_p);
+  const h1mp = h1.filter(s=>s.mean_p!=null).map(s=>s.mean_p);
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+
+  return {
+    total, correct, h0: h0.length, h1: h1.length,
+    h0correct, h1correct,
+    acc: total ? correct/total : 0,
+    h0acc: h0.length ? h0correct/h0.length : 0,
+    h1acc: h1.length ? h1correct/h1.length : 0,
+    avgReward: avg(rewards),
+    avgMp: avg(mps),
+    avgH0mp: avg(h0mp),
+    avgH1mp: avg(h1mp),
+    avgTime: avg(times),
+  };
+}
+
+// ── RENDER ──
+function render() {
+  renderStats();
+  renderGrid();
+  renderCharts();
+  if (selectedId) renderDetail(samples.find(s=>s.case_id===selectedId));
+}
+
+function pct(v, digits=0) {
+  if (v == null) return '—';
+  return (v*100).toFixed(digits) + '%';
+}
+
+function renderStats() {
+  const st = calcStats();
+  if (!st) return;
+
+  const accEl = document.getElementById('s-acc');
+  accEl.textContent = pct(st.acc);
+  accEl.className = 'stat-value ' + (st.acc >= .7 ? 'green' : st.acc >= .5 ? 'amber' : 'red');
+  document.getElementById('s-acc-sub').textContent = `${st.correct} / ${st.total} correct`;
+
+  const h0El = document.getElementById('s-h0');
+  h0El.textContent = pct(st.h0acc);
+  h0El.className = 'stat-value ' + (st.h0acc >= .8 ? 'green' : st.h0acc >= .5 ? 'amber' : 'red');
+  document.getElementById('s-h0-sub').textContent = `${st.h0correct}/${st.h0} rejected`;
+
+  const h1El = document.getElementById('s-h1');
+  h1El.textContent = pct(st.h1acc);
+  h1El.className = 'stat-value ' + (st.h1acc >= .6 ? 'green' : st.h1acc >= .3 ? 'amber' : 'red');
+  document.getElementById('s-h1-sub').textContent = `${st.h1correct}/${st.h1} detected`;
+
+  document.getElementById('s-reward').textContent = st.avgReward != null ? st.avgReward.toFixed(3) : '—';
+  document.getElementById('s-reward-sub').textContent = 'mean over samples';
+
+  const mpEl = document.getElementById('s-mp');
+  mpEl.textContent = st.avgMp != null ? st.avgMp.toFixed(3) : '—';
+  const h0s = st.avgH0mp != null ? st.avgH0mp.toFixed(2) : '—';
+  const h1s = st.avgH1mp != null ? st.avgH1mp.toFixed(2) : '—';
+  document.getElementById('s-mp-sub').textContent = `H0:${h0s} H1:${h1s}`;
+
+  document.getElementById('s-total').textContent = st.total;
+  document.getElementById('s-total-sub').textContent = `H0:${st.h0} H1:${st.h1}`;
+
+  document.getElementById('s-time').textContent = st.avgTime != null ? st.avgTime.toFixed(1)+'s' : '—';
+  document.getElementById('grid-filter-info').textContent = `${st.total} samples`;
+}
+
+function renderGrid() {
+  const container = document.getElementById('grid-container');
+  container.innerHTML = '';
+  samples.forEach(s => {
+    const status = getStatus(s);
+    const div = document.createElement('div');
+    div.className = `tile ${status}` + (s.case_id === selectedId ? ' selected' : '');
+    div.dataset.id = s.case_id;
+    const rewardPct = Math.min(100, (s.reward || 0) * 100);
+    div.innerHTML = `
+      <div class="tile-top">
+        <span class="class-badge ${s.ground_truth_class}">${(s.ground_truth_class||'?').toUpperCase()}</span>
+        <span class="snr-label">${s.snr != null && s.snr !== '' ? 'snr'+s.snr : ''}</span>
+      </div>
+      <div class="tile-id">${s.case_id}</div>
+      <div class="tile-verdict">${verdictShort(s.verdict || s.runtime_verdict)}</div>
+      <div class="reward-bar-bg"><div class="reward-bar-fill" style="width:${rewardPct}%"></div></div>
+      <div class="tile-reward-num">${s.reward ? s.reward.toFixed(2) : '—'}</div>
+    `;
+    div.onclick = () => selectSample(s.case_id);
+    container.appendChild(div);
+  });
+}
+
+function selectSample(id) {
+  selectedId = selectedId === id ? null : id;
+  document.querySelectorAll('.tile').forEach(t => {
+    t.classList.toggle('selected', t.dataset.id === selectedId);
+  });
+  const s = selectedId ? samples.find(s => s.case_id === selectedId) : null;
+  renderDetail(s);
+}
+
+function renderDetail(s) {
+  const nameEl = document.getElementById('detail-name');
+  const metaEl = document.getElementById('detail-meta');
+  const body = document.getElementById('detail-body');
+
+  if (!s) {
+    nameEl.textContent = 'SELECT A TILE';
+    metaEl.textContent = 'click any sample to inspect';
+    body.innerHTML = '<div class="detail-empty"><div class="arrow">←</div><div>Click any sample tile<br>to view diagnostics</div></div>';
+    return;
+  }
+
+  const status = getStatus(s);
+  const statusColor = status === 'correct' ? 'green' : status === 'unresolved' ? 'amber' : status === 'error' ? 'red' : '';
+  nameEl.textContent = s.case_id;
+  metaEl.textContent = `${(s.ground_truth_class||'').toUpperCase()} · SNR ${s.snr} · ${s.signal_type} / ${s.noise_type}`;
+
+  const row = (k, v, cls='') => `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val ${cls}">${v}</span></div>`;
+
+  let html = '';
+
+  // Status
+  html += `<div class="detail-section">
+    <div class="detail-section-title">Classification</div>
+    ${row('Ground Truth', (s.ground_truth_class||'—').toUpperCase())}
+    ${row('Verdict', `<span class="verdict-chip ${status}">${s.verdict||'—'}</span>`, '')}
+    ${row('Runtime Verdict', s.runtime_verdict || '—')}
+    ${row('Status', status.toUpperCase(), statusColor)}
+    ${row('Success Flag', s.success ? '✓ YES' : '✗ NO', s.success ? 'green' : 'red')}
+  </div>`;
+
+  // Scores
+  const mpColor = (v) => v != null ? (v < .1 ? 'green' : v < .3 ? 'amber' : v > .7 ? 'red' : '') : '';
+  html += `<div class="detail-section">
+    <div class="detail-section-title">Scores</div>
+    ${row('Reward', s.reward ? s.reward.toFixed(4) : '—', 'cyan')}
+    ${row('mean_p', s.mean_p != null ? s.mean_p.toFixed(4) : '—', mpColor(s.mean_p))}
+    ${row('loc_score', s.loc_score != null ? s.loc_score.toFixed(4) : '—')}
+    ${row('p source', s.mean_p_source || '—')}
+  </div>`;
+
+  // Reward breakdown
+  if (s.reward_components) {
+    const rc = s.reward_components;
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Reward Components</div>
+      ${row('r_sensitivity', rc.r_sensitivity != null ? rc.r_sensitivity.toFixed(4) : '—')}
+      ${row('r_localization', rc.r_localization != null ? rc.r_localization.toFixed(4) : '—')}
+      ${row('r_stability', rc.r_stability != null ? rc.r_stability.toFixed(4) : '—')}
+      ${row('r_fpr_penalty', rc.r_fpr_penalty != null ? rc.r_fpr_penalty.toFixed(4) : '—', rc.r_fpr_penalty < -0.1 ? 'red' : '')}
+      ${row('r_jitter', rc.r_jitter_penalty != null ? rc.r_jitter_penalty.toFixed(4) : '—', rc.r_jitter_penalty < -0.1 ? 'amber' : '')}
+    </div>`;
+  }
+
+  // p-values
+  if (s.p_values) {
+    const pvLabels = {
+      p_main_peak: 'main_peak_I',
+      p_track_mass: 'track_mass',
+      p_track_duration: 'track_dur',
+      p_persistent_track_count: 'persist_cnt',
+      p_spike_concentration: 'spike_conc',
+    };
+    html += `<div class="detail-section"><div class="detail-section-title">p-Values</div>`;
+    Object.entries(s.p_values).forEach(([k, v]) => {
+      const label = pvLabels[k] || k;
+      const pv = parseFloat(v);
+      const c = isNaN(pv) ? '#3a4870' : pv <= .1 ? '#00f088' : pv <= .3 ? '#ffaa00' : '#ff2244';
+      const pct = isNaN(pv) ? 0 : Math.round(pv * 100);
+      html += `<div class="pval-row">
+        <div class="pval-label"><span>${label}</span><span style="color:${c}">${isNaN(pv)?'—':pv.toFixed(4)}</span></div>
+        <div class="pval-bar-bg"><div class="pval-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Bus params
+  if (s.bus_params && s.bus_params.mean) {
+    const m = s.bus_params.mean;
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Bus Parameters (mean)</div>
+      ${row('L (lambda)', m.L != null ? m.L.toExponential(3) : '—')}
+      ${row('D (delta)', m.D != null ? m.D.toExponential(3) : '—')}
+      ${row('Q (env. hardness)', m.Q != null ? m.Q.toFixed(2) : '—', m.Q > 500 ? 'green' : m.Q < 50 ? 'amber' : '')}
+      ${row('K (kappa)', m.K != null ? m.K.toExponential(3) : '—')}
+    </div>`;
+  }
+
+  // Timing
+  if (s.elapsed_s != null) {
+    const total = s.elapsed_s;
+    const ph1 = s.phase1_s || 0;
+    const bin = s.binary_s || 0;
+    const stg = s.staging_s || 0;
+    const ph1pct = Math.round(ph1/total*100);
+    const binpct = Math.round(bin/total*100);
+    const stgpct = Math.round(stg/total*100);
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Timing</div>
+      ${row('Total', total.toFixed(1) + 's')}
+      <div class="timing-bar">
+        <div class="timing-seg" style="width:${ph1pct}%;background:#00ccff88;flex-basis:${ph1pct}%"></div>
+        <div class="timing-seg" style="width:${binpct}%;background:#ff886655;flex-basis:${binpct}%"></div>
+        <div class="timing-seg" style="width:${stgpct}%;background:#9966ff55;flex-basis:${stgpct}%"></div>
+      </div>
+      <div style="display:flex;gap:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:4px">
+        <span style="color:#00ccff88">■</span> phase1: ${ph1.toFixed(1)}s
+        <span style="color:#ff886655">■</span> binary: ${bin.toFixed(1)}s
+        <span style="color:#9966ff55">■</span> staging: ${stg.toFixed(2)}s
+      </div>
+    </div>`;
+  }
+
+  // Signal meta
+  html += `<div class="detail-section">
+    <div class="detail-section-title">Signal Metadata</div>
+    ${row('seq_len', s.seq_len || '—')}
+    ${row('channels', s.channels || '—')}
+    ${row('signal_type', s.signal_type || '—')}
+    ${row('noise_type', s.noise_type || '—')}
+    ${row('SNR', s.snr)}
+  </div>`;
+
+  body.innerHTML = html;
+}
+
+// ── CHARTS ──
+function renderCharts() {
+  drawRewardChart();
+  drawTimingChart();
+}
+
+function drawRewardChart() {
+  const canvas = document.getElementById('chart-reward');
+  if (!canvas || !samples.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 24;
+  const H = canvas.parentElement.clientHeight - 32;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 30, r: 8, t: 8, b: 20 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a2540';
+  ctx.lineWidth = 0.5;
+  [0, .25, .5, .75, 1].forEach(v => {
+    const y = pad.t + plotH * (1 - v);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#3a4870';
+    ctx.font = '8px JetBrains Mono, monospace';
+    ctx.fillText(v.toFixed(2), 0, y + 3);
+  });
+
+  const n = samples.length;
+  samples.forEach((s, i) => {
+    if (s.reward == null) return;
+    const x = pad.l + (i / Math.max(n-1, 1)) * plotW;
+    const y = pad.t + plotH * (1 - Math.min(1, s.reward));
+    const status = getStatus(s);
+    const color = status === 'correct' ? '#00f088' : status === 'unresolved' ? '#ffaa00' : status === 'error' ? '#ff2244' : '#3a4870';
+
+    // Bar
+    ctx.fillStyle = color + '44';
+    ctx.fillRect(x - 3, y, 6, pad.t + plotH - y);
+
+    // Dot
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Axis label
+  ctx.fillStyle = '#3a4870';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.fillText('0', pad.l + 2, H - 4);
+  ctx.fillText(n, pad.l + plotW - 8, H - 4);
+}
+
+function drawTimingChart() {
+  const canvas = document.getElementById('chart-timing');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 24;
+  const H = canvas.parentElement.clientHeight - 32;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const timed = samples.filter(s => s.elapsed_s != null);
+  if (!timed.length) {
+    ctx.fillStyle = '#3a4870';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillText('no timing data', 20, H/2);
+    return;
+  }
+
+  const pad = { l: 30, r: 8, t: 8, b: 20 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
+  const maxT = Math.max(...timed.map(s => s.elapsed_s));
+
+  // Grid
+  ctx.strokeStyle = '#1a2540';
+  ctx.lineWidth = 0.5;
+  [0, .25, .5, .75, 1].forEach(v => {
+    const y = pad.t + plotH * (1 - v);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + plotW, y); ctx.stroke();
+    ctx.fillStyle = '#3a4870';
+    ctx.font = '8px JetBrains Mono, monospace';
+    ctx.fillText((maxT * v).toFixed(0)+'s', 0, y + 3);
+  });
+
+  const n = timed.length;
+  const barW = Math.max(2, Math.min(12, plotW / n - 2));
+
+  timed.forEach((s, i) => {
+    const x = pad.l + (i / Math.max(n-1, 1)) * plotW - barW/2;
+    const total = s.elapsed_s;
+    const ph1 = s.phase1_s || 0;
+    const bin = s.binary_s || 0;
+    const stg = s.staging_s || 0;
+
+    let yBase = pad.t + plotH;
+
+    const drawSeg = (val, color) => {
+      if (!val) return;
+      const h = (val / maxT) * plotH;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, yBase - h, barW, h);
+      yBase -= h;
+    };
+
+    drawSeg(stg, '#9966ff66');
+    drawSeg(bin, '#ff886688');
+    drawSeg(ph1, '#00ccff66');
+  });
+
+  // Axis
+  ctx.fillStyle = '#3a4870';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.fillText('0', pad.l + 2, H - 4);
+  ctx.fillText(n, pad.l + plotW - 8, H - 4);
+}
+
+// ── WINDOW RESIZE ──
+window.addEventListener('resize', () => { if (samples.length) renderCharts(); });
+
+// ── INIT ──
+// Check if File System Access API is available
+if (!('showDirectoryPicker' in window)) {
+  document.getElementById('empty-state').innerHTML = `
+    <div class="empty-logo">AXIOM</div>
+    <div class="empty-sub" style="color:var(--red)">FILE SYSTEM ACCESS API NOT AVAILABLE</div>
+    <div class="empty-sub" style="font-size:11px">Please use Chrome or Edge (version 86+)</div>
+  `;
+}
+</script>
+</body>
+</html>

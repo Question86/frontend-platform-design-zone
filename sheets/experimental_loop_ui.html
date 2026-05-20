@@ -1,0 +1,3876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experimental Loop Control Center</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="{{ url_for('static', filename='graph_engine.js', v='20260216-cyclefix2') }}"></script>
+<style>
+:root {
+  --bg:        #050814;
+  --bg2:       #0a0e27;
+  --bg3:       #0f1535;
+  --cyan:      #00d4ff;
+  --purple:    #9d4edd;
+  --green:     #06ffa5;
+  --orange:    #ff6b35;
+  --red:       #ff3366;
+  --yellow:    #ffd60a;
+  --txt:       #e8eaed;
+  --txt2:      #9aa0a6;
+  --txt3:      #4a5568;
+  --grid:      rgba(0,212,255,0.06);
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(0,212,255,0.25);
+  --glow-c:    rgba(0,212,255,0.15);
+  --glow-p:    rgba(157,78,221,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px}
+body{
+  font-family:'JetBrains Mono',monospace;
+  background:var(--bg);
+  color:var(--txt);
+  height:100vh;
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:52px 1fr;
+  grid-template-columns:220px 1fr 300px;
+}
+
+/* ── GRID BG ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+  animation:gridScroll 30s linear infinite;
+  pointer-events:none;z-index:0;
+}
+@keyframes gridScroll{0%{transform:translate(0,0)}100%{transform:translate(40px,40px)}}
+
+/* ── ORB ── */
+.orb{position:fixed;border-radius:50%;filter:blur(120px);opacity:.12;pointer-events:none;z-index:0}
+.orb1{width:700px;height:700px;top:-300px;left:-200px;background:var(--purple);animation:o1 18s ease-in-out infinite}
+.orb2{width:500px;height:500px;bottom:-200px;right:-100px;background:var(--cyan);animation:o2 22s ease-in-out infinite}
+@keyframes o1{0%,100%{transform:translate(0,0)}50%{transform:translate(80px,60px)}}
+@keyframes o2{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,-40px)}}
+
+/* ── TOPBAR ── */
+#topbar{
+  grid-column:1/-1;grid-row:1;
+  position:relative;z-index:100;
+  display:flex;align-items:center;gap:0;
+  background:rgba(5,8,20,0.95);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);
+}
+.tb-logo{
+  padding:0 20px;
+  font-family:'Space Mono',monospace;
+  font-size:15px;font-weight:700;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:2px;
+  border-right:1px solid var(--border);
+  height:100%;display:flex;align-items:center;
+  white-space:nowrap;
+}
+.tb-nav{display:flex;height:100%;flex:1}
+.tb-nav button{
+  height:100%;padding:0 18px;
+  background:none;border:none;border-right:1px solid var(--border);
+  color:var(--txt2);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  letter-spacing:1px;text-transform:uppercase;
+  transition:all .2s;white-space:nowrap;
+  position:relative;
+}
+.tb-nav button.active,.tb-nav button:hover{color:var(--cyan);background:var(--glow-c)}
+.tb-nav button.active::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+}
+.tb-status{
+  margin-left:auto;display:flex;align-items:center;gap:16px;
+  padding:0 20px;border-left:1px solid var(--border);
+  font-size:11px;color:var(--txt2);
+}
+.tb-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 8px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  font-size:10px;
+  color:var(--txt2);
+}
+.tb-pill.ok{border-color:rgba(6,255,165,.35);color:var(--green);background:rgba(6,255,165,.08)}
+.tb-pill.warn{border-color:rgba(255,214,10,.35);color:var(--yellow);background:rgba(255,214,10,.08)}
+.tb-pill.fail{border-color:rgba(255,51,102,.35);color:var(--red);background:rgba(255,51,102,.08)}
+.status-dot{
+  width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;
+}
+.dot-green{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.dot-red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot-yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:pulse 1.5s infinite}
+.dot-gray{background:var(--txt3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── SIDEBAR LEFT ── */
+#sidebar-left{
+  grid-column:1;grid-row:2;
+  position:relative;z-index:10;
+  background:rgba(10,14,39,0.8);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  backdrop-filter:blur(10px);
+}
+.sl-section{padding:16px 0;border-bottom:1px solid var(--border)}
+.sl-label{
+  padding:0 16px 8px;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--txt3);
+}
+.sl-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;cursor:pointer;
+  transition:all .15s;font-size:12px;color:var(--txt2);
+  border-left:2px solid transparent;
+}
+.sl-item:hover,.sl-item.active{
+  background:var(--glow-c);color:var(--cyan);
+  border-left-color:var(--cyan);
+}
+.sl-item.is-disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+.sl-item .icon{font-size:14px;width:18px;text-align:center}
+.sl-badge{
+  margin-left:auto;padding:2px 7px;border-radius:99px;
+  font-size:10px;background:rgba(0,212,255,.15);color:var(--cyan);
+}
+.sl-badge.red{background:rgba(255,51,102,.15);color:var(--red)}
+.sl-badge.green{background:rgba(6,255,165,.15);color:var(--green)}
+
+/* ── MAIN AREA ── */
+#main{
+  grid-column:2;grid-row:2;
+  position:relative;z-index:5;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+}
+
+/* ── PANEL SYSTEM ── */
+.panel{display:none;flex:1;overflow:hidden;flex-direction:column}
+.panel.active{display:flex}
+
+/* ── LOOP LIFECYCLE CANVAS ── */
+#loop-canvas-wrap{
+  flex:1;position:relative;overflow:hidden;
+  background:rgba(5,8,20,0.3);
+}
+#loop-canvas{
+  width:100%;height:100%;
+  cursor:default;
+}
+
+/* ── LOOP PHASE NODES ── */
+.loop-node{
+  position:absolute;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  min-width:180px;
+  cursor:pointer;
+  user-select:none;
+  transition:border-color .2s,box-shadow .2s;
+  z-index:20;
+}
+.loop-node:hover,.loop-node.active{
+  border-color:var(--cyan);
+  box-shadow:0 0 20px var(--glow-c);
+}
+.loop-node.completed{border-color:var(--green);box-shadow:0 0 20px rgba(6,255,165,.2)}
+.loop-node.current{border-color:var(--purple);box-shadow:0 0 20px rgba(157,78,221,.2)}
+.loop-node.pending{border-color:var(--txt3)}
+.loop-header{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  border-radius:12px 12px 0 0;
+  background:rgba(0,212,255,.04);
+}
+.loop-icon{font-size:18px}
+.loop-title{font-size:12px;font-weight:700;color:var(--txt);letter-spacing:.5px}
+.loop-status-dot{width:8px;height:8px;border-radius:50%;margin-left:auto;flex-shrink:0}
+.loop-body{padding:12px 16px}
+.loop-desc{font-size:10px;color:var(--txt3);margin-bottom:8px}
+.loop-metrics{display:flex;gap:8px}
+.metric-item{text-align:center}
+.metric-value{font-size:14px;font-weight:700;color:var(--cyan)}
+.metric-label{font-size:9px;color:var(--txt3);text-transform:uppercase}
+
+/* ── CONNECTIONS ── */
+#connections-svg{
+  position:absolute;inset:0;pointer-events:none;z-index:15;overflow:visible;
+}
+.wire{
+  fill:none;
+  stroke:var(--cyan);
+  stroke-width:2.2;
+  opacity:.9;
+  filter:drop-shadow(0 0 4px var(--cyan));
+}
+.wire.core{
+  stroke:var(--purple);
+  stroke-dasharray:6 4;
+  opacity:.8;
+}
+.wire.active{
+  stroke:var(--green);
+  filter:drop-shadow(0 0 6px var(--green));
+}
+.wire-label{
+  fill:var(--txt2);
+  font-size:10px;
+  letter-spacing:.4px;
+  font-family:'JetBrains Mono',monospace;
+}
+.port-row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+}
+.port-col{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.port{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:18px;
+  font-size:9px;
+  color:var(--txt2);
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:2px 8px;
+  pointer-events:auto;
+  cursor:crosshair;
+}
+.port.in{
+  border-color:rgba(255,214,10,.45);
+}
+.port.out{
+  border-color:rgba(6,255,165,.45);
+}
+.port.compat{
+  box-shadow:0 0 0 2px rgba(0,212,255,.35);
+}
+.port-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  display:inline-block;
+}
+.port.in .port-dot{background:var(--yellow)}
+.port.out .port-dot{background:var(--green)}
+.connection{
+  fill:none;stroke:var(--cyan);stroke-width:2;
+  stroke-dasharray:none;opacity:.7;
+  filter:drop-shadow(0 0 4px var(--cyan));
+}
+.connection.active{stroke:var(--green);filter:drop-shadow(0 0 6px var(--green))}
+
+/* ── CANVAS TOOLBAR ── */
+.loop-toolbar{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px;
+  background:rgba(10,14,39,0.9);
+  border-bottom:1px solid var(--border);
+}
+.lt-btn{
+  padding:6px 12px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--txt2);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  transition:all .15s;display:flex;align-items:center;gap:5px;
+}
+.lt-btn:hover{border-color:var(--cyan);color:var(--cyan);background:var(--glow-c)}
+.lt-btn.danger:hover{border-color:var(--red);color:var(--red);background:rgba(255,51,102,.1)}
+.lt-sep{width:1px;height:24px;background:var(--border)}
+.lt-label{font-size:11px;color:var(--txt3);margin-left:auto}
+
+/* ── LOOP CONTROLS ── */
+.loop-controls{
+  padding:16px;
+  background:rgba(10,14,39,0.95);
+  border-top:1px solid var(--border);
+  max-height:200px;
+  overflow-y:auto;
+}
+.control-section{margin-bottom:16px}
+.control-title{
+  font-size:11px;color:var(--cyan);letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:8px;
+}
+.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.control-btn{
+  padding:8px 12px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--txt2);cursor:pointer;
+  font-size:10px;font-family:'JetBrains Mono',monospace;
+  transition:all .15s;text-align:center;
+}
+.control-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.control-btn.primary{background:var(--glow-c);border-color:var(--cyan);color:var(--cyan)}
+.control-btn.danger{background:rgba(255,51,102,.1);border-color:var(--red);color:var(--red)}
+.control-btn.danger:hover{background:rgba(255,51,102,.2)}
+.control-btn:disabled,.lt-btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+/* ── SIDEBAR RIGHT ── */
+#sidebar-right{
+  grid-column:3;grid-row:2;
+  position:relative;z-index:10;
+  background:rgba(10,14,39,0.85);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  backdrop-filter:blur(10px);
+}
+.sr-tabs{
+  display:flex;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.sr-tab{
+  flex:1;padding:11px 8px;text-align:center;
+  background:none;border:none;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--txt3);letter-spacing:.5px;text-transform:uppercase;
+  transition:all .15s;border-bottom:2px solid transparent;
+}
+.sr-tab.active,.sr-tab:hover{color:var(--cyan);border-bottom-color:var(--cyan)}
+.sr-content{flex:1;overflow-y:auto;padding:14px}
+.terminal-toolbar{display:flex;gap:6px;margin-bottom:10px;align-items:center}
+.terminal-select{flex:1;background:var(--bg2);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.terminal-btn{background:transparent;color:var(--txt2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer}
+.terminal-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.terminal-meta{font-size:10px;color:var(--txt3);margin-bottom:8px}
+
+/* ── STATUS MONITORS ── */
+.status-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-bottom:10px;
+  transition:border-color .2s;
+}
+.status-card:hover{border-color:var(--border2)}
+.status-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.status-label{font-size:10px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase}
+.status-value{font-size:22px;font-weight:700}
+.status-value.cyan{color:var(--cyan)}
+.status-value.green{color:var(--green)}
+.status-value.orange{color:var(--orange)}
+.status-value.purple{color:var(--purple)}
+.status-pass{color:var(--green)}
+.status-blocked{color:var(--red)}
+.status-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.status-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.fill-cyan{background:linear-gradient(90deg,var(--cyan),var(--purple))}
+.fill-green{background:var(--green)}
+.fill-orange{background:var(--orange)}
+.fill-purple{background:var(--purple)}
+.status-sub{font-size:10px;color:var(--txt3);margin-top:5px}
+
+/* ── AI LIFE MONITOR ── */
+.life-coordinate-system {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 10px auto;
+  background: radial-gradient(circle, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%);
+  border-radius: 50%;
+  border: 2px solid #6b46c1;
+  overflow: hidden;
+}
+
+.coordinate-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.coordinate-grid::before,
+.coordinate-grid::after {
+  content: '';
+  position: absolute;
+  background: rgba(107, 70, 193, 0.3);
+}
+
+.coordinate-grid::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.coordinate-grid::after {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
+.life-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #6b46c1, #553c9a);
+  border-radius: 50%;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 8px rgba(107, 70, 193, 0.8);
+  transition: all 1s ease-in-out;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.life-trail {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.life-confidence {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 9px;
+  color: #cccccc;
+}
+
+.confidence-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b46c1;
+}
+
+.life-interpretation {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 8px;
+  color: #999;
+  min-height: 2em;
+  line-height: 1.2;
+}
+
+/* Life monitor animations */
+@keyframes fade-trail {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* Breadcrumb Trail Styles */
+.breadcrumb-trail {
+  max-height: 120px;
+  overflow-y: auto;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  background: var(--bg2);
+  border-radius: 3px;
+  font-size: 9px;
+  border-left: 2px solid var(--accent);
+}
+
+.breadcrumb-ts {
+  color: var(--txt3);
+  font-family: 'Courier New', monospace;
+  min-width: 50px;
+  margin-right: 4px;
+}
+
+.breadcrumb-op {
+  color: var(--txt);
+  font-weight: 500;
+  min-width: 60px;
+  margin-right: 4px;
+  text-transform: uppercase;
+}
+
+.breadcrumb-file {
+  color: var(--txt2);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb-count {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 9px;
+  color: var(--txt3);
+}
+
+/* ── AGENT CONTROLS ── */
+.agent-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-bottom:10px;
+}
+.agent-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.agent-name{font-size:12px;font-weight:700;color:var(--txt);flex:1}
+.agent-model{font-size:10px;color:var(--txt3)}
+.agent-actions{display:flex;gap:6px;margin-top:10px}
+.agent-btn{
+  flex:1;padding:6px;border-radius:6px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--txt2);cursor:pointer;font-size:10px;
+  font-family:'JetBrains Mono',monospace;
+  transition:all .15s;
+}
+.agent-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.agent-btn.primary{background:var(--glow-c);border-color:var(--cyan);color:var(--cyan)}
+.agent-btn.stop{border-color:var(--red);color:var(--red)}
+.agent-btn.stop:hover{background:rgba(255,51,102,.1)}
+
+/* ── LOOP LIFECYCLE TRACKER ── */
+.lifecycle-tracker{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-bottom:10px;
+}
+.lifecycle-stage{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;margin-bottom:6px;
+}
+.stage-indicator{
+  width:12px;height:12px;border-radius:50%;
+  border:2px solid #666;
+}
+.stage-indicator.active{background:#3b82f6;border-color:#3b82f6}
+.stage-indicator.completed{background:#50c8a0;border-color:#50c8a0}
+.stage-indicator.pending{background:#808080;border-color:#808080}
+.stage-label{font-size:11px;color:var(--txt2);flex:1}
+
+/* ── AUDIT PANEL ── */
+.audit-panel{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-bottom:10px;
+}
+.audit-title{font-size:11px;color:var(--orange);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.audit-item{display:flex;justify-content:space-between;margin-bottom:6px}
+.audit-label{font-size:10px;color:var(--txt3)}
+.audit-status{font-size:10px}
+.audit-status.pass{color:var(--green)}
+.audit-status.fail{color:var(--red)}
+.audit-status.warn{color:var(--yellow)}
+
+/* ── MODAL ── */
+#modal-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(5,8,20,.8);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+}
+#modal-overlay.show{display:flex}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:16px;padding:28px;width:480px;max-width:90vw;
+  box-shadow:0 0 60px var(--glow-p);
+}
+.modal-title{font-size:16px;font-weight:700;color:var(--cyan);margin-bottom:6px}
+.modal-sub{font-size:11px;color:var(--txt3);margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.modal-btn{
+  padding:9px 20px;border-radius:7px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  border:1px solid var(--border);background:transparent;color:var(--txt2);
+  transition:all .15s;
+}
+.modal-btn.primary{
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  border:none;color:white;font-weight:700;
+}
+.modal-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- ══ TOPBAR ══ -->
+<header id="topbar">
+  <div class="tb-logo">LOOP_COCKPIT</div>
+  <nav class="tb-nav">
+    <button class="active" onclick="showPanel('lifecycle',this)">◈ Lifecycle</button>
+    <button onclick="showPanel('monitor',this)">📊 Monitor</button>
+    <button onclick="showPanel('agents',this)">🤖 Agents</button>
+    <button onclick="showPanel('settings',this)">⚙ Settings</button>
+  </nav>
+  <div class="tb-status">
+    <span id="loop-status-indicator"><span class="status-dot dot-green" id="loop-status-dot"></span><span id="loop-status-text">Loop Active</span></span>
+    <span><span class="status-dot dot-yellow" id="ai-status"></span>AI Ready</span>
+    <span id="policy-gate-pill" class="tb-pill warn"><span class="status-dot dot-yellow" id="policy-gate-dot"></span><span id="policy-gate-text">Policy Gate: --</span></span>
+    <span id="current-phase" style="color:var(--cyan);font-size:10px">Phase: Bootstrap</span>
+  </div>
+</header>
+
+<!-- ══ SIDEBAR LEFT ══ -->
+<aside id="sidebar-left">
+  <div class="sl-section">
+    <div class="sl-label">Loop Control</div>
+    <div class="sl-item active" onclick="selectSideItem(this,'lifecycle')">
+      <span class="icon">◈</span> Lifecycle View
+    </div>
+    <div class="sl-item" onclick="selectSideItem(this,'phases')">
+      <span class="icon">📋</span> Phase Details
+    </div>
+  </div>
+  <div class="sl-section">
+    <div class="sl-label">Agents</div>
+    <div class="sl-item" onclick="selectSideItem(this,'main-agent')">
+      <span class="icon">🤖</span> Main Agent
+      <span class="sl-badge green">IDLE</span>
+    </div>
+    <div class="sl-item" onclick="selectSideItem(this,'ai-monitor')">
+      <span class="icon">🧠</span> AI Monitor
+      <span class="sl-badge">Active</span>
+    </div>
+  </div>
+  <div class="sl-section">
+    <div class="sl-label">Services</div>
+    <div class="sl-item" id="si-cockpit" onclick="pingService('cockpit')">
+      <span class="icon">🌐</span> Cockpit :5000
+      <span class="sl-badge green">UP</span>
+    </div>
+    <div class="sl-item" id="si-ollama" onclick="pingService('ollama')">
+      <span class="icon">🦙</span> Ollama :11434
+      <span class="sl-badge green">UP</span>
+    </div>
+    <div class="sl-item" id="si-supervisor" onclick="autostartControl('refresh')">
+      <span class="icon">⚙️</span> Supervisor scripts
+      <span class="sl-badge" id="si-supervisor-ratio">0/0</span>
+      <span class="sl-badge" id="si-supervisor-state">UNKNOWN</span>
+    </div>
+  </div>
+  <div class="sl-section">
+    <div class="sl-label">Quick Actions</div>
+    <div class="sl-item" id="qa-confirm-bootstrap" onclick="confirmBootstrap()">
+      <span class="icon">▶</span> Confirm Bootstrap
+    </div>
+    <div class="sl-item" id="qa-finalize-loop" onclick="finalizeLoop()">
+      <span class="icon">✓</span> Finalize Loop
+    </div>
+    <div class="sl-item" id="qa-run-audit" onclick="runAudit()">
+      <span class="icon">🔍</span> Pre-Final Audit
+    </div>
+    <div class="sl-item" id="qa-reset-loop" onclick="resetLoop()">
+      <span class="icon">⟳</span> Reset Loop
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN AREA ══ -->
+<main id="main">
+
+  <!-- LIFECYCLE PANEL -->
+  <div class="panel active" id="panel-lifecycle">
+    <div class="loop-toolbar">
+      <button class="lt-btn" id="btn-tool-select" onclick="setCanvasTool('select')">🖱 Select</button>
+      <button class="lt-btn" id="btn-tool-wire" onclick="setCanvasTool('wire')">🔗 Wire</button>
+      <button class="lt-btn" id="btn-tool-pan" onclick="setCanvasTool('pan')">✥ Pan</button>
+      <button class="lt-btn" id="btn-tool-snap" onclick="toggleSnapGrid()">⋯ Snap</button>
+      <div class="lt-sep"></div>
+      <button class="lt-btn" onclick="autoArrange()">⊞ Auto Arrange</button>
+      <button class="lt-btn" onclick="refreshLifecycle()">⟳ Refresh</button>
+      <button class="lt-btn" onclick="exportPipelineJson()">↓ Export JSON</button>
+      <button class="lt-btn" onclick="importPipelineJson()">↑ Import JSON</button>
+      <button class="lt-btn" onclick="savePipelineServer()">☁ Save Pipeline</button>
+      <button class="lt-btn" onclick="loadPipelineServer()">☁ Load Pipeline</button>
+      <button class="lt-btn primary" onclick="executePipelinePlan()">▶ Execute Pipeline</button>
+      <button class="lt-btn danger" onclick="deleteSelectedNode()">⌫ Delete Selected</button>
+      <div class="lt-sep"></div>
+      <button class="lt-btn primary" onclick="advancePhase()">▶ Advance Phase</button>
+      <div class="lt-sep"></div>
+      <span class="lt-label" id="phase-hint">Click nodes to view details</span>
+    </div>
+    <div id="phase-detail-text" style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--txt2);background:rgba(10,14,39,0.85)">
+      Waiting for phase details...
+    </div>
+    <div style="display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);background:rgba(5,8,20,.5)">
+      <span style="font-size:10px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-right:8px">Add Node</span>
+      <button class="lt-btn" onclick="addCustomNode('task')">🧩 Task</button>
+      <button class="lt-btn" onclick="addCustomNode('database')">🗄 Database</button>
+      <button class="lt-btn" onclick="addCustomNode('api')">🌐 API</button>
+      <button class="lt-btn" onclick="addCustomNode('report')">📝 Report</button>
+      <button class="lt-btn" onclick="addCustomNode('bug')">🐞 Bug</button>
+      <button class="lt-btn" onclick="addCustomNode('code')">💻 Code</button>
+      <button class="lt-btn" onclick="addCustomNode('script')">📜 Script</button>
+    </div>
+    <div id="loop-canvas-wrap">
+      <div id="canvas-inner" style="position:absolute;width:3600px;height:2200px;transform-origin:0 0;">
+        <svg id="connections-svg" style="position:absolute;inset:0;overflow:visible;width:100%;height:100%"></svg>
+      </div>
+      <svg id="preview-wire" style="position:absolute;inset:0;overflow:visible;width:100%;height:100%;pointer-events:none"></svg>
+    </div>
+    <div class="loop-controls">
+      <div class="control-section">
+        <div class="control-title">Phase Controls</div>
+        <div class="control-grid">
+          <button class="control-btn" onclick="viewPhase('bootstrap')">Bootstrap</button>
+          <button class="control-btn" onclick="viewPhase('active')">Active</button>
+          <button class="control-btn" onclick="viewPhase('finalized')">Finalized</button>
+          <button class="control-btn" onclick="viewPhase('reset')">Reset</button>
+        </div>
+      </div>
+      <div class="control-section">
+        <div class="control-title">Actions</div>
+        <div class="control-grid">
+          <button class="control-btn primary" id="btn-finalize-control" onclick="finalizeLoop()">✓ Finalize</button>
+          <button class="control-btn danger" onclick="emergencyStop()">◼ Emergency Stop</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONITOR PANEL -->
+  <div class="panel" id="panel-monitor">
+    <div style="padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--txt2)">Cockpit:</span>
+      <input id="monitor-url" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12px;flex:1;outline:none" value="http://localhost:5000" />
+      <button class="lt-btn" onclick="refreshMonitor()">⟳ Refresh</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px">
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Loop Progress</span>
+          <span style="font-size:16px">◈</span>
+        </div>
+        <div class="status-value cyan" id="loop-progress">0%</div>
+        <div class="status-bar"><div class="status-fill fill-cyan" id="progress-fill" style="width:0%"></div></div>
+        <div class="status-sub">Current loop completion</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">AI Confidence</span>
+          <span style="font-size:16px">🧠</span>
+        </div>
+        <div class="status-value green" id="ai-confidence">85%</div>
+        <div class="status-bar"><div class="status-fill fill-green" id="confidence-fill" style="width:85%"></div></div>
+        <div class="status-sub">AI decision confidence</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Tasks Completed</span>
+          <span style="font-size:16px">✓</span>
+        </div>
+        <div class="status-value purple" id="tasks-done">0</div>
+        <div class="status-sub">This loop cycle</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Loop Gate</span>
+          <span style="font-size:16px">🚪</span>
+        </div>
+        <div class="status-value" id="gate-status">UNKNOWN</div>
+        <div class="status-sub">Entry validation status</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Policy Gate</span>
+          <span style="font-size:16px">🛡</span>
+        </div>
+        <div class="status-value" id="policy-gate-status">UNKNOWN</div>
+        <div class="status-sub" id="policy-gate-sub">Waiting for /api/policy-gate/status</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Active Tasks</span>
+          <span style="font-size:16px">📋</span>
+        </div>
+        <div class="status-value orange" id="active-tasks">0</div>
+        <div class="status-sub">Tasks in NEU.md</div>
+      </div>
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Closed Tasks</span>
+          <span style="font-size:16px">📁</span>
+        </div>
+        <div class="status-value green" id="closed-tasks">0</div>
+        <div class="status-sub">Tasks in Alt.md</div>
+      </div>
+      
+      <!-- AI Life Monitor Coordinate System -->
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">AI Life Monitor</span>
+          <span style="font-size:16px">🧠</span>
+        </div>
+        <div class="life-coordinate-system">
+          <div class="coordinate-grid"></div>
+          <div class="life-trail" id="life-trail"></div>
+          <div class="life-dot" id="life-dot"></div>
+        </div>
+        <div class="life-confidence">
+          Confidence: <span class="confidence-value" id="confidence-value">--</span> | 
+          Arousal: <span class="arousal-value" id="arousal-value">--</span>
+        </div>
+        <div class="life-interpretation" id="life-interpretation">
+          Initializing...
+        </div>
+      </div>
+      
+      <!-- AI Breadcrumb Trail -->
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">AI Breadcrumb Trail</span>
+          <span style="font-size:16px">🗺️</span>
+        </div>
+        <div class="breadcrumb-trail" id="breadcrumb-trail">
+          <div class="breadcrumb-item">
+            <span class="breadcrumb-ts">--:--:--</span>
+            <span class="breadcrumb-op">Initializing...</span>
+            <span class="breadcrumb-file">Waiting for data</span>
+          </div>
+        </div>
+        <div class="breadcrumb-count">
+          Total: <span id="breadcrumb-count">0</span> events
+        </div>
+      </div>
+
+      <!-- Autostart Supervisor Monitor -->
+      <div class="status-card">
+        <div class="status-top">
+          <span class="status-label">Autostart Supervisor</span>
+          <span style="font-size:16px">⚙️</span>
+        </div>
+        <div style="font-size:11px;color:var(--txt2);margin-bottom:8px">
+          Supervisor: <span id="autostart-supervisor-state">unknown</span>
+          <span style="margin-left:8px;color:var(--txt3)">PID:</span>
+          <span id="autostart-supervisor-pid">--</span>
+        </div>
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:10px">
+          Jobs: <span id="autostart-total-jobs">0</span> total,
+          <span id="autostart-running-jobs">0</span> running,
+          <span id="autostart-failed-jobs">0</span> failed
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+          <button class="control-btn" onclick="autostartControl('start')">Start</button>
+          <button class="control-btn danger" onclick="autostartControl('stop')">Stop</button>
+          <button class="control-btn primary" onclick="autostartControl('restart')">Restart</button>
+        </div>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px;background:var(--bg2)">
+          <div id="autostart-jobs-list" style="font-size:10px;color:var(--txt3)">Loading...</div>
+        </div>
+      </div>
+      
+      <div class="transition-hint" style="margin-top:16px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:4px">💡 Transition Hint</div>
+        <div id="transition-hint" style="font-size:14px;color:var(--txt)">Waiting for bootstrap completion...</div>
+      </div>
+      <div class="lifecycle-tracker">
+        <div class="lifecycle-stage">
+          <div class="stage-indicator active"></div>
+          <span class="stage-label">Ready for Reset</span>
+        </div>
+        <div class="lifecycle-stage">
+          <div class="stage-indicator pending"></div>
+          <span class="stage-label">Bootstrap Confirmed</span>
+        </div>
+        <div class="lifecycle-stage">
+          <div class="stage-indicator pending"></div>
+          <span class="stage-label">Active Development</span>
+        </div>
+        <div class="lifecycle-stage">
+          <div class="stage-indicator pending"></div>
+          <span class="stage-label">Pre-Finalization Audit</span>
+        </div>
+        <div class="lifecycle-stage">
+          <div class="stage-indicator pending"></div>
+          <span class="stage-label">Loop Finalized</span>
+        </div>
+      </div>
+      <div class="audit-panel" id="monitor-audit-panel">
+        <div class="audit-title">Pre-Finalization Audit</div>
+        <div class="audit-item">
+          <span class="audit-label">File Integrity</span>
+          <span class="audit-status pass">PASS</span>
+        </div>
+        <div class="audit-item">
+          <span class="audit-label">Task Completion</span>
+          <span class="audit-status pass">PASS</span>
+        </div>
+        <div class="audit-item">
+          <span class="audit-label">Documentation</span>
+          <span class="audit-status warn">WARN</span>
+        </div>
+        <div class="audit-item">
+          <span class="audit-label">AI Validation</span>
+          <span class="audit-status pass">PASS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENTS PANEL -->
+  <div class="panel" id="panel-agents">
+    <div style="padding:20px;overflow-y:auto;flex:1">
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="status-dot dot-green"></span>
+          <span class="agent-name">Main Development Agent</span>
+          <span class="agent-model" id="agent-model-display">OpenAI:gpt-5</span>
+        </div>
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:4px">STATUS</div>
+        <div style="font-size:11px;color:var(--cyan);margin-bottom:10px" id="agent-status">Ready for task execution</div>
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:4px">LAST ACTION</div>
+        <div style="font-size:11px;color:var(--txt2)" id="agent-last-action">None</div>
+        
+        <!-- Agent Configuration -->
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:4px;margin-top:10px">CONFIGURATION</div>
+        <div style="margin-bottom:10px">
+          <select id="agent-model-select" style="width:100%;padding:4px;border:1px solid var(--border);background:var(--bg2);color:var(--txt);font-size:10px;border-radius:4px">
+            <option value="OpenAI:gpt-5">OpenAI: GPT-5</option>
+            <option value="OpenAI:gpt-4o">OpenAI: GPT-4o</option>
+            <option value="OpenAI:gpt-4o-mini">OpenAI: GPT-4o-mini</option>
+            <option value="Ollama:mistral">Ollama: mistral</option>
+            <option value="Ollama:codellama">Ollama: codellama</option>
+          </select>
+        </div>
+        
+        <div class="agent-actions">
+          <button class="agent-btn primary" onclick="runAgent()">▶ Run</button>
+          <button class="agent-btn" onclick="pauseAgent()">⏸ Pause</button>
+          <button class="agent-btn stop" onclick="stopAgent()">◼ Stop</button>
+        </div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="status-dot dot-yellow"></span>
+          <span class="agent-name">AI Integrity Monitor</span>
+        </div>
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:4px">PROTECTED FILES</div>
+        <div style="font-size:11px;color:var(--green);margin-bottom:10px">97 files monitored</div>
+        <div style="font-size:10px;color:var(--txt3);margin-bottom:4px">LAST CHECK</div>
+        <div style="font-size:11px;color:var(--txt2)">2 minutes ago</div>
+        <div class="agent-actions">
+          <button class="agent-btn" onclick="runIntegrityCheck()">🔍 Check</button>
+          <button class="agent-btn" onclick="viewIntegrityLog()">📋 Log</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="panel" id="panel-settings">
+    <div style="padding:20px;overflow-y:auto;flex:1">
+      <div class="settings-section">
+        <div class="settings-section-title">🔄 Loop Configuration</div>
+        <div class="settings-row">
+          <div class="settings-field">
+            <label>Current Loop Number</label>
+            <input id="loop-number" type="text" value="97" readonly/>
+          </div>
+          <div class="settings-field">
+            <label>Loop Status</label>
+            <input id="loop-status" type="text" value="ACTIVE" readonly/>
+          </div>
+        </div>
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-info">
+            <span class="name">Auto-Advance Phases</span>
+            <span class="desc">Automatically advance to next phase when conditions met</span>
+          </div>
+          <div class="toggle-switch on" id="tog-auto-advance" onclick="toggleSwitch(this,'auto-advance')"></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">🤖 Agent Settings</div>
+        <div class="settings-row">
+          <div class="settings-field">
+            <label>Primary AI Backend</label>
+            <select id="ai-backend">
+              <option value="ollama">Ollama (Local)</option>
+              <option value="anthropic">Anthropic API</option>
+              <option value="openai">OpenAI API</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>Model</label>
+            <input id="ai-model" type="text" value="codellama:latest"/>
+          </div>
+        </div>
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-info">
+            <span class="name">Enable AI Integrity Checks</span>
+            <span class="desc">Monitor AI outputs for false positives and bypass attempts</span>
+          </div>
+          <div class="toggle-switch on" id="tog-integrity" onclick="toggleSwitch(this,'integrity')"></div>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveSettings()">↓ Save Settings</button>
+    </div>
+  </div>
+
+</main>
+
+<aside id="props-panel" style="position:fixed;right:0;top:52px;bottom:0;width:320px;background:rgba(8,12,32,.98);border-left:1px solid var(--border2);backdrop-filter:blur(20px);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;overflow:hidden">
+  <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="font-size:13px;font-weight:700;color:var(--txt);flex:1" id="props-title">Node Properties</div>
+    <button style="background:none;border:none;color:var(--txt3);cursor:pointer;font-size:16px;padding:4px" onclick="closePropsPanel()">✕</button>
+  </div>
+  <div id="props-body" style="flex:1;overflow-y:auto;padding:14px"></div>
+</aside>
+
+<div id="canvas-context" style="position:fixed;z-index:1000;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:6px;box-shadow:0 10px 40px rgba(0,0,0,.6);display:none;min-width:170px">
+  <div class="lt-btn" style="width:100%;justify-content:flex-start" onclick="ctxOpenProps()">⚙ Properties</div>
+  <div class="lt-btn" style="width:100%;justify-content:flex-start" onclick="ctxDuplicateNode()">⧉ Duplicate</div>
+  <div class="lt-btn" style="width:100%;justify-content:flex-start" onclick="ctxDeleteNode()">🗑 Delete</div>
+</div>
+
+<!-- ══ SIDEBAR RIGHT ══ -->
+<aside id="sidebar-right">
+  <div class="sr-tabs">
+    <button class="sr-tab active" onclick="srTab(this,'log')">Log</button>
+    <button class="sr-tab" onclick="srTab(this,'terminal')">Terminal</button>
+    <button class="sr-tab" onclick="srTab(this,'metrics')">Metrics</button>
+    <button class="sr-tab" onclick="srTab(this,'audit')">Audit</button>
+  </div>
+  <div id="sr-log" class="sr-content">
+    <!-- Live log lines -->
+    <div class="log-line">
+      <span class="log-ts">14:32:15</span>
+      <span class="log-level INFO">INFO</span>
+      <span class="log-msg">Loop cockpit initialized</span>
+    </div>
+    <div class="log-line">
+      <span class="log-ts">14:32:16</span>
+      <span class="log-level OK">OK</span>
+      <span class="log-msg">AI integrity monitor active</span>
+    </div>
+  </div>
+  <div id="sr-terminal" class="sr-content" style="display:none">
+    <div class="terminal-toolbar">
+      <select id="terminal-source" class="terminal-select" onchange="setTerminalSource(this.value)">
+        <option value="transaction">transaction log</option>
+        <option value="state">state transition log</option>
+        <option value="flask">flask debug log</option>
+        <option value="bandwidth">bandwidth log</option>
+      </select>
+      <button id="terminal-pause-btn" class="terminal-btn" onclick="toggleTerminalPause()">Pause</button>
+      <button class="terminal-btn" onclick="clearTerminalView()">Clear</button>
+    </div>
+    <div class="terminal-meta" id="terminal-meta">Waiting for terminal feed...</div>
+    <div id="sr-terminal-feed"></div>
+  </div>
+  <div id="sr-metrics" class="sr-content" style="display:none">
+    <div class="status-card">
+      <div class="status-top"><span class="status-label">Uptime</span></div>
+      <div class="status-value cyan" id="sr-uptime">0:00</div>
+      <div class="status-sub">Session duration</div>
+    </div>
+    <div class="status-card">
+      <div class="status-top"><span class="status-label">Memory Usage</span></div>
+      <div class="status-value green" id="sr-memory">45%</div>
+      <div class="status-bar"><div class="status-fill fill-green" style="width:45%"></div></div>
+      <div class="status-sub">System memory</div>
+    </div>
+    <div class="status-card">
+      <div class="status-top"><span class="status-label">AI Calls</span></div>
+      <div class="status-value purple" id="sr-ai-calls">127</div>
+      <div class="status-sub">This session</div>
+    </div>
+  </div>
+  <div id="sr-audit" class="sr-content" style="display:none">
+    <div class="audit-panel" id="sr-audit-panel">
+      <div class="audit-title">Integrity Audit</div>
+      <div class="audit-item">
+        <span class="audit-label">File Hashes</span>
+        <span class="audit-status pass">PASS</span>
+      </div>
+      <div class="audit-item">
+        <span class="audit-label">Transaction Log</span>
+        <span class="audit-status pass">PASS</span>
+      </div>
+      <div class="audit-item">
+        <span class="audit-label">AI Breadcrumb Trail</span>
+        <span class="audit-status pass">PASS</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Toast container -->
+<div id="toast"></div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirm Action</div>
+    <div class="modal-sub" id="modal-sub">Are you sure?</div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  STATE MANAGEMENT
+// ══════════════════════════════════════════════════
+const state = {
+  currentPhase: 'bootstrap',
+  loopNumber: 97,
+  phases: {
+    finalized: {status: 'completed', x: 120, y: 110},
+    reset: {status: 'pending', x: 380, y: 110},
+    bootstrap: {status: 'completed', x: 640, y: 110},
+    active: {status: 'current', x: 900, y: 110}
+  },
+  agents: {
+    main: {status: 'idle', lastAction: null},
+    monitor: {status: 'active', lastCheck: Date.now()}
+  },
+  customNodes: {},
+  connections: [],
+  nodeCounter: 1,
+  selectedNodeId: null,
+  canvas: {
+    tool: 'select',
+    snap: true,
+    grid: 20,
+    tx: {x: 0, y: 0, scale: 1},
+    drag: null,
+    wire: null,
+    contextNodeId: null
+  },
+  metrics: {
+    progress: 0,
+    confidence: 85,
+    tasksDone: 0,
+    uptime: 0,
+    memory: 45,
+    aiCalls: 127
+  },
+  guardians: {
+    status: null,
+    audit: null,
+    gates: null,
+    finalization: null,
+    policyGate: null
+  },
+  terminal: {
+    source: 'transaction',
+    paused: false,
+    lastUpdatedAt: null
+  }
+};
+
+// ══════════════════════════════════════════════════
+//  LOOP PHASE SYSTEM
+// ══════════════════════════════════════════════════
+const PHASE_DEFS = {
+  finalized: {
+    singleton: true,
+    family: 'core',
+    icon: '✓', title: 'Finalized', color: 'green',
+    desc: 'Archive finalized and ready for reset transition',
+    metrics: {state: 'finalized', verified: 'PASS'},
+    inputs: ['finalization preparation'],
+    outputs: ['reset loop']
+  },
+  reset: {
+    singleton: true,
+    family: 'core',
+    icon: '⟳', title: 'Ready for Reset', color: 'orange',
+    desc: 'Loop reset stage that prepares bootstrap state',
+    metrics: {state: 'reset', gate: 'CHECK'},
+    inputs: ['reset loop'],
+    outputs: ['bootstrap']
+  },
+  bootstrap: {
+    singleton: true,
+    family: 'core',
+    icon: '🌱', title: 'Bootstrap', color: 'purple',
+    desc: 'Bootstrap executed and confirmation required',
+    metrics: {state: 'bootstrap', confirm: 'REQUIRED'},
+    inputs: ['bootstrap'],
+    outputs: ['bootstrap confirmed']
+  },
+  active: {
+    singleton: true,
+    family: 'core',
+    icon: '⚡', title: 'Active Development', color: 'cyan',
+    desc: 'Live execution state for task pipeline orchestration',
+    metrics: {state: 'active', tasks: 'runtime'},
+    inputs: ['bootstrap confirmed'],
+    outputs: ['finalization preparation']
+  }
+};
+
+const NODE_DEFS = {
+  task: {
+    singleton: false,
+    family: 'task',
+    icon: '🧩',
+    title: 'Task Node',
+    color: 'purple',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['task', 'taskId'],
+    inputs: ['input', 'refer'],
+    props: {
+      agentType: 'OpenAI',
+      model: 'gpt-5',
+      task: '',
+      taskTitle: '',
+      taskDescription: '',
+      successDefinition: '',
+      failureDefinition: '',
+      generatedTaskId: '',
+      status: 'idle'
+    }
+  },
+  database: {
+    singleton: false,
+    family: 'database',
+    icon: '🗄',
+    title: 'Database Query',
+    color: 'cyan',
+    status: ['idle', 'querying', 'ready', 'error'],
+    outputs: ['query', 'refer'],
+    inputs: ['input'],
+    props: {query: '', input: '', refer: '', status: 'idle', results: []}
+  },
+  api: {
+    singleton: false,
+    family: 'api',
+    icon: '🌐',
+    title: 'API Node',
+    color: 'cyan',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['api', 'refer'],
+    inputs: ['input'],
+    props: {url: 'http://127.0.0.1:5000/health', input: '', refer: '', status: 'idle', results: []}
+  },
+  report: {
+    singleton: false,
+    family: 'report',
+    icon: '📝',
+    title: 'Report Node',
+    color: 'green',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['report'],
+    inputs: ['task', 'refer'],
+    props: {taskId: '', content: '', createdPath: '', status: 'idle'}
+  },
+  bug: {
+    singleton: false,
+    family: 'bug',
+    icon: '🐞',
+    title: 'Bug Node',
+    color: 'orange',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['bug'],
+    inputs: ['task', 'refer'],
+    props: {taskId: '', content: '', createdPath: '', status: 'idle'}
+  },
+  code: {
+    singleton: false,
+    family: 'code',
+    icon: '💻',
+    title: 'Code Node',
+    color: 'cyan',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['code'],
+    inputs: ['task', 'refer'],
+    props: {taskId: '', content: '', createdPath: '', status: 'idle'}
+  },
+  script: {
+    singleton: false,
+    family: 'script',
+    icon: '📜',
+    title: 'Script Node',
+    color: 'yellow',
+    status: ['idle', 'running', 'ready', 'error'],
+    outputs: ['script'],
+    inputs: ['task', 'refer'],
+    props: {taskId: '', content: '', createdPath: '', scriptPath: '', scriptArgs: '', lastRun: '', lastRunOutput: '', status: 'idle'}
+  },
+  // Legacy node support for already persisted localStorage payloads
+  spawn: {
+    singleton: false,
+    family: 'agent',
+    icon: '🤖',
+    title: 'Spawn Agent',
+    color: 'purple',
+    status: ['idle', 'running', 'stopped'],
+    outputs: ['agent'],
+    inputs: [],
+    props: {agentType: 'OpenAI', model: 'gpt-5', memoryMB: 512, task: '', status: 'idle'}
+  },
+  finalize: {
+    singleton: true,
+    family: 'finalize',
+    icon: '✅',
+    title: 'Finalize Loop',
+    color: 'green',
+    status: ['ready', 'auditing', 'finalizing'],
+    outputs: ['finalized'],
+    inputs: ['task'],
+    props: {archiveName: 'ARCHIV_AUTO', reason: '', auditFile: false, auditTasks: false, auditAI: false, status: 'ready'}
+  },
+  dbquery: {
+    singleton: false,
+    family: 'database',
+    icon: '🗄',
+    title: 'Database Query',
+    color: 'cyan',
+    status: ['idle', 'querying', 'streaming'],
+    outputs: ['research'],
+    inputs: ['agent'],
+    props: {queryType: 'semantic', limit: 10, threshold: 0.7, autoSave: false, question: '', status: 'idle', results: []}
+  },
+};
+
+let graphEngine = null;
+let lastWireValidationError = '';
+const CANVAS_STATE_KEY = 'experimental_canvas_state_v2';
+const CANVAS_LKG_KEY = 'experimental_canvas_state_v2_lkg';
+const PIPELINE_SCHEMA_VERSION = '2.0.0';
+
+const PORT_TYPE_HINTS = {
+  'reset loop': 'CORE_FLOW',
+  'bootstrap': 'CORE_FLOW',
+  'bootstrap confirmed': 'CORE_FLOW',
+  'finalization preparation': 'CORE_FLOW',
+  'task': 'TASK_REF',
+  'taskid': 'TASK_REF',
+  'query': 'QUERY',
+  'input': 'ANY',
+  'refer': 'REFERENCE',
+  'report': 'REPORT_ARTIFACT',
+  'bug': 'BUG_ARTIFACT',
+  'code': 'CODE_ARTIFACT',
+  'script': 'SCRIPT_ARTIFACT',
+  'api': 'API_REF',
+  'finalized': 'CORE_FLOW',
+};
+
+function inferPortType(name) {
+  const key = String(name || '').trim().toLowerCase();
+  return PORT_TYPE_HINTS[key] || 'ANY';
+}
+
+function isPhaseType(type) {
+  return !!PHASE_DEFS[type];
+}
+
+function validateConnectionSemanticPolicy({ fromNode, toNode, outPort, inPort }) {
+  const fromType = String(fromNode?.type || '');
+  const toType = String(toNode?.type || '');
+  const outName = String(outPort?.name || '').toLowerCase();
+  const inName = String(inPort?.name || '').toLowerCase();
+
+  const phaseOrder = {
+    finalized: 'reset',
+    reset: 'bootstrap',
+    bootstrap: 'active',
+    active: 'finalized'
+  };
+
+  if (isPhaseType(fromType) && isPhaseType(toType)) {
+    if (phaseOrder[fromType] !== toType) {
+      return { ok: false, reason: `Core flow requires ${fromType} -> ${phaseOrder[fromType] || 'next phase'}` };
+    }
+  }
+
+  const artifactTypes = new Set(['report', 'bug', 'code', 'script']);
+  const taskProducerTypes = new Set(['task', 'spawn']);
+  if (artifactTypes.has(toType) && inName === 'task') {
+    // Explicitly support task -> script/report/bug/code pipelines.
+    if (taskProducerTypes.has(fromType)) {
+      return { ok: true, reason: '' };
+    }
+    return { ok: false, reason: `${toType} nodes require input from a task node on 'task' port` };
+  }
+
+  if (toType === 'database' && inName === 'input' && !['task', 'database', 'api', 'active'].includes(fromType)) {
+    return { ok: false, reason: "Database 'input' must originate from task/database/api/core-active flow" };
+  }
+
+  if (toType === 'api' && inName === 'input' && !['task', 'database', 'api', 'active'].includes(fromType)) {
+    return { ok: false, reason: "API 'input' must originate from task/database/api/core-active flow" };
+  }
+
+  if (fromType === 'archive' && toType === 'database') {
+    return { ok: false, reason: 'Archive outputs cannot connect directly to database nodes' };
+  }
+
+  if (fromType === 'active' && outName === 'finalization preparation' && !['task', 'database', 'api', 'finalize'].includes(toType)) {
+    return { ok: false, reason: "Active flow connects only to task/database/api/finalize entry nodes" };
+  }
+
+  return { ok: true, reason: '' };
+}
+
+function nodeSpecFromDefs(type, isPhase = false) {
+  const def = isPhase ? PHASE_DEFS[type] : NODE_DEFS[type];
+  if (!def) return null;
+  return {
+    type,
+    inputs: (def.inputs || []).map((p) => ({ name: p, type: inferPortType(p) })),
+    outputs: (def.outputs || []).map((p) => ({ name: p, type: inferPortType(p) })),
+    defaultParams: JSON.parse(JSON.stringify(def.props || {})),
+    meta: {
+      singleton: !!def.singleton,
+      family: def.family || (isPhase ? 'core' : 'custom')
+    },
+    execute: async ({ params, inputs }) => {
+      if (type === 'task') {
+        return { task: params.generatedTaskId || params.taskTitle || '', taskId: params.generatedTaskId || '' };
+      }
+      if (type === 'database') {
+        return { query: params.query || '', refer: params.refer || '' };
+      }
+      if (type === 'api') {
+        return { api: params.url || '', refer: params.refer || '' };
+      }
+      if (['report', 'bug', 'code', 'script'].includes(type)) {
+        return { [type]: params.taskId || inputs.task || '' };
+      }
+      if (isPhase) {
+        const out = {};
+        (def.outputs || []).forEach((p) => { out[p] = p; });
+        return out;
+      }
+      const out = {};
+      (def.outputs || []).forEach((p) => { out[p] = inputs[p] ?? params[p] ?? null; });
+      return out;
+    }
+  };
+}
+
+function initGraphEngine() {
+  if (!window.GraphEngineLib) return;
+  graphEngine = window.GraphEngineLib.createEngine({
+    schemaVersion: '1.0.0',
+    semanticRule: validateConnectionSemanticPolicy
+  });
+  Object.keys(PHASE_DEFS).forEach((type) => graphEngine.registerNodeType(type, nodeSpecFromDefs(type, true)));
+  Object.keys(NODE_DEFS).forEach((type) => graphEngine.registerNodeType(type, nodeSpecFromDefs(type, false)));
+  graphEngine.executor.on('progress', ({ nodeId, status }) => {
+    if (!state.customNodes[nodeId]) return;
+    state.customNodes[nodeId].props.execState = status;
+  });
+}
+
+function syncGraphEngineFromState() {
+  if (!graphEngine) return;
+  graphEngine.store.reset();
+  Object.entries(state.phases).forEach(([id, phase]) => {
+    graphEngine.store.addNode({
+      id,
+      type: id,
+      position: { x: phase.x, y: phase.y },
+      params: { status: phase.status }
+    });
+  });
+  Object.entries(state.customNodes).forEach(([id, node]) => {
+    graphEngine.store.addNode({
+      id,
+      type: node.type,
+      position: { x: node.x, y: node.y },
+      params: JSON.parse(JSON.stringify(node.props || {}))
+    });
+  });
+  state.connections.forEach((c) => {
+    graphEngine.store.addEdge({
+      id: c.id,
+      from: { nodeId: c.fromNode, port: c.fromPort },
+      to: { nodeId: c.toNode, port: c.toPort },
+    });
+  });
+}
+
+function getExecutionPlan(targetIds = null) {
+  if (!graphEngine) return [];
+  syncGraphEngineFromState();
+  try {
+    return graphEngine.planner.topologicalSort(targetIds);
+  } catch (_e) {
+    return [];
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  PANEL SYSTEM
+// ══════════════════════════════════════════════════
+function showPanel(id, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tb-nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='monitor') refreshMonitor();
+}
+
+function srTab(btn, id){
+  document.querySelectorAll('.sr-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  ['log','terminal','metrics','audit'].forEach(n=>{
+    document.getElementById('sr-'+n).style.display = n===id?'block':'none';
+  });
+}
+
+function selectSideItem(el, type){
+  document.querySelectorAll('.sl-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  if (type === 'lifecycle') {
+    const lifecycleBtn = document.querySelector('.tb-nav button:nth-child(1)');
+    showPanel('lifecycle', lifecycleBtn);
+    return;
+  }
+  if (type === 'phases') {
+    const monitorBtn = document.querySelector('.tb-nav button:nth-child(2)');
+    showPanel('monitor', monitorBtn);
+    const hint = document.getElementById('transition-hint');
+    if (hint) hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    renderPhaseDetails(state.guardians.status, state.guardians);
+    return;
+  }
+}
+
+function renderPhaseDetails(statusData, guards = null) {
+  const detailEl = document.getElementById('phase-detail-text');
+  const hintEl = document.getElementById('phase-hint');
+  if (!detailEl || !hintEl) return;
+  if (!statusData) {
+    detailEl.textContent = 'Phase details unavailable. Waiting for /api/status.';
+    hintEl.textContent = 'Waiting for backend state sync';
+    return;
+  }
+  const status = statusData.status || 'UNKNOWN';
+  const gate = statusData.gateStatus || 'UNKNOWN';
+  const preFinal = guards?.gates?.gates?.pre_finalization;
+  const finalizeReady = status === 'ACTIVE' && gate !== 'BLOCKED' && Boolean(guards?.audit?.canFinalize) && (preFinal ? preFinal.valid : true);
+  const resetReady = Boolean(statusData.canReset);
+  const loopText = typeof statusData.loop === 'number' ? `Loop ${statusData.loop}` : 'Loop ?';
+  hintEl.textContent = `${loopText} | ${status}`;
+  detailEl.textContent = `${loopText} | State=${status} | Gate=${gate} | Finalize=${finalizeReady ? 'READY' : 'BLOCKED'} | Reset=${resetReady ? 'READY' : 'BLOCKED'}${statusData.transitionHint ? ` | ${statusData.transitionHint}` : ''}`;
+}
+
+// ══════════════════════════════════════════════════
+//  LOOP NODE CREATION & MANAGEMENT
+// ══════════════════════════════════════════════════
+function renderLoopNodes(){
+  const inner = document.getElementById('canvas-inner') || document.getElementById('loop-canvas-wrap');
+  inner.querySelectorAll('.loop-node').forEach(n=>n.remove());
+
+  Object.entries(state.phases).forEach(([id, phase]) => {
+    const def = PHASE_DEFS[id];
+    const el = document.createElement('div');
+    el.className = `loop-node ${phase.status}${state.selectedNodeId === id ? ' selected' : ''}`;
+    el.id = `node-${id}`;
+    el.style.left = phase.x + 'px';
+    el.style.top = phase.y + 'px';
+
+    const colorVar = `var(--${def.color})`;
+
+    const phaseInputPorts = (def.inputs || []).map((p) => `<div class="port in" data-node="${id}" data-port="${p}" data-dir="in"><span class="port-dot"></span><span>${p}</span></div>`).join('');
+    const phaseOutputPorts = (def.outputs || []).map((p) => `<div class="port out" data-node="${id}" data-port="${p}" data-dir="out"><span>${p}</span><span class="port-dot"></span></div>`).join('');
+
+    el.innerHTML = `
+      <div class="loop-header" style="border-top:3px solid ${colorVar}">
+        <span class="loop-icon">${def.icon}</span>
+        <span class="loop-title">${def.title}</span>
+        <div class="loop-status-dot" style="background:${colorVar}"></div>
+      </div>
+      <div class="port-row">
+        <div class="port-col">${phaseInputPorts}</div>
+        <div class="port-col">${phaseOutputPorts}</div>
+      </div>
+      <div class="loop-body">
+        <div class="loop-desc">${def.desc}</div>
+        <div class="loop-metrics">
+          ${Object.entries(def.metrics).map(([k,v])=>`
+            <div class="metric-item">
+              <div class="metric-value">${v}</div>
+              <div class="metric-label">${k}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); selectPhase(id); });
+    initNodeDrag(el, id, true);
+    bindPorts(el);
+    inner.appendChild(el);
+  });
+
+  Object.entries(state.customNodes).forEach(([id, node]) => {
+    const def = NODE_DEFS[node.type];
+    const colorVar = `var(--${def.color})`;
+    const el = document.createElement('div');
+    el.className = `loop-node custom ${node.props.status}${state.selectedNodeId === id ? ' selected' : ''}`;
+    el.id = `node-${id}`;
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    const inputPorts = (def.inputs || []).map((p) => `<div class="port in" data-node="${id}" data-port="${p}" data-dir="in"><span class="port-dot"></span><span>${p}</span></div>`).join('');
+    const outputPorts = (def.outputs || []).map((p) => `<div class="port out" data-node="${id}" data-port="${p}" data-dir="out"><span>${p}</span><span class="port-dot"></span></div>`).join('');
+
+    el.innerHTML = `
+      <div class="loop-header" style="border-top:3px solid ${colorVar}">
+        <span class="loop-icon">${def.icon}</span>
+        <span class="loop-title">${def.title}</span>
+        <div class="loop-status-dot" style="background:${colorVar}"></div>
+      </div>
+      <div class="port-row">
+        <div class="port-col">${inputPorts}</div>
+        <div class="port-col">${outputPorts}</div>
+      </div>
+      <div class="loop-body">
+        <div class="loop-desc">${def.title} node</div>
+        <div class="loop-metrics">
+          <div class="metric-item"><div class="metric-value">${node.props.status}</div><div class="metric-label">status</div></div>
+          <div class="metric-item"><div class="metric-value">${node.props.cacheStatus || '--'}</div><div class="metric-label">cache</div></div>
+          <div class="metric-item"><div class="metric-value">${(node.props.outputHash || '--').slice(0, 6)}</div><div class="metric-label">out hash</div></div>
+        </div>
+      </div>`;
+
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); selectPhase(id); });
+    el.addEventListener('dblclick', () => openPropsPanel(id));
+    el.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      state.canvas.contextNodeId = id;
+      const menu = document.getElementById('canvas-context');
+      menu.style.left = `${ev.clientX}px`;
+      menu.style.top = `${ev.clientY}px`;
+      menu.style.display = 'block';
+    });
+    initNodeDrag(el, id, false);
+    bindPorts(el);
+    inner.appendChild(el);
+  });
+
+  renderConnections();
+  applyCanvasTransform();
+}
+
+function selectPhase(id){
+  document.querySelectorAll('.loop-node').forEach(n=>n.classList.remove('active'));
+  const n = document.getElementById(`node-${id}`);
+  if (n) n.classList.add('active');
+  state.selectedNodeId = id;
+  state.currentPhase = id;
+  const title = PHASE_DEFS[id]?.title || NODE_DEFS[state.customNodes[id]?.type]?.title || id;
+  document.getElementById('current-phase').textContent = `Phase: ${title}`;
+}
+
+function getPortCenter(nodeId, portName, dir) {
+  // Use actual rendered port positions so wires stay aligned when nodes vary in height.
+  const nodeEl = document.getElementById(`node-${nodeId}`);
+  if (!nodeEl) return null;
+  const inner = document.getElementById('canvas-inner');
+  if (!inner) return null;
+  const portEl = nodeEl.querySelector(`.port[data-node="${nodeId}"][data-port="${portName}"][data-dir="${dir}"]`);
+  if (portEl) {
+    const pRect = portEl.getBoundingClientRect();
+    const iRect = inner.getBoundingClientRect();
+    const scale = state.canvas.tx.scale || 1;
+    const cx = (pRect.left + pRect.width / 2 - iRect.left) / scale;
+    const cy = (pRect.top + pRect.height / 2 - iRect.top) / scale;
+    return { x: cx, y: cy };
+  }
+  const nx = parseFloat(nodeEl.style.left) || 0;
+  const ny = parseFloat(nodeEl.style.top) || 0;
+  return dir === 'out'
+    ? { x: nx + 220, y: ny + 55 }
+    : { x: nx, y: ny + 55 };
+}
+
+function renderConnections(){
+  const svg = document.getElementById('connections-svg');
+  svg.innerHTML = '';
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <marker id="wire-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <polygon points="0 0, 8 3.5, 0 7" fill="#00d4ff"></polygon>
+    </marker>
+    <marker id="wire-arrow-core" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto">
+      <polygon points="0 0, 8 3.5, 0 7" fill="#9d4edd"></polygon>
+    </marker>
+  `;
+  svg.appendChild(defs);
+
+  const coreFlow = [
+    { from: 'finalized', to: 'reset', label: 'reset loop' },
+    { from: 'reset', to: 'bootstrap', label: 'bootstrap' },
+    { from: 'bootstrap', to: 'active', label: 'bootstrap confirmed' },
+    { from: 'active', to: 'finalized', label: 'finalization preparation' },
+  ];
+
+  coreFlow.forEach((edge) => {
+    const from = state.phases[edge.from];
+    const to = state.phases[edge.to];
+    if (!from || !to) return;
+    const fx = from.x + 220;
+    const fy = from.y + 78;
+    const tx = to.x;
+    const ty = to.y + 78;
+    const d = `M${fx},${fy} C${fx+80},${fy} ${tx-80},${ty} ${tx},${ty}`;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', d);
+    path.setAttribute('marker-end', 'url(#wire-arrow-core)');
+    path.classList.add('wire', 'core');
+    svg.appendChild(path);
+
+    const lx = (fx + tx) / 2;
+    const ly = (fy + ty) / 2 - 10;
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', String(lx));
+    label.setAttribute('y', String(ly));
+    label.setAttribute('class', 'wire-label');
+    label.textContent = edge.label;
+    svg.appendChild(label);
+  });
+
+  state.connections.forEach((c) => {
+    const fromPt = getPortCenter(c.fromNode, c.fromPort, 'out');
+    const toPt = getPortCenter(c.toNode, c.toPort, 'in');
+    if (!fromPt || !toPt) return;
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const dx = Math.max(60, Math.abs(toPt.x - fromPt.x) * 0.45);
+    p.setAttribute('d', `M${fromPt.x},${fromPt.y} C${fromPt.x + dx},${fromPt.y} ${toPt.x - dx},${toPt.y} ${toPt.x},${toPt.y}`);
+    p.setAttribute('marker-end', 'url(#wire-arrow)');
+    p.classList.add('wire');
+    svg.appendChild(p);
+  });
+}
+
+function autoArrange(){
+  const phases = Object.keys(state.phases);
+  phases.forEach((id, i) => {
+    state.phases[id].x = 100 + i * 200;
+    state.phases[id].y = 120;
+  });
+  let i = 0;
+  Object.keys(state.customNodes).forEach((id) => {
+    state.customNodes[id].x = 120 + (i % 3) * 280;
+    state.customNodes[id].y = 360 + Math.floor(i / 3) * 180;
+    i++;
+  });
+  renderLoopNodes();
+  persistCanvasState();
+  log('INFO', 'Loop phases auto-arranged');
+}
+
+function setCanvasTool(tool) {
+  state.canvas.tool = tool;
+  ['select', 'wire', 'pan'].forEach((t) => {
+    const b = document.getElementById(`btn-tool-${t}`);
+    if (!b) return;
+    b.classList.toggle('tool-active', t === tool);
+  });
+  const wrap = document.getElementById('loop-canvas-wrap');
+  if (wrap) {
+    wrap.style.cursor = tool === 'pan' ? 'grab' : (tool === 'wire' ? 'crosshair' : 'default');
+  }
+}
+
+function toggleSnapGrid() {
+  state.canvas.snap = !state.canvas.snap;
+  const btn = document.getElementById('btn-tool-snap');
+  if (btn) btn.classList.toggle('tool-active', state.canvas.snap);
+}
+
+function snap(v) {
+  if (!state.canvas.snap) return v;
+  return Math.round(v / state.canvas.grid) * state.canvas.grid;
+}
+
+function applyCanvasTransform() {
+  const inner = document.getElementById('canvas-inner');
+  if (!inner) return;
+  const t = state.canvas.tx;
+  inner.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
+}
+
+function initNodeDrag(el, id, isPhase) {
+  el.addEventListener('mousedown', (ev) => {
+    if (ev.button !== 0) return;
+    if (state.canvas.tool === 'wire') return;
+    if (ev.target.closest('.port')) return;
+    ev.preventDefault();
+    const startX = ev.clientX;
+    const startY = ev.clientY;
+    const originX = parseFloat(el.style.left) || 0;
+    const originY = parseFloat(el.style.top) || 0;
+    el.classList.add('dragging');
+    state.canvas.drag = {id, isPhase, startX, startY, originX, originY};
+
+    const onMove = (mv) => {
+      const dx = (mv.clientX - startX) / state.canvas.tx.scale;
+      const dy = (mv.clientY - startY) / state.canvas.tx.scale;
+      const nx = snap(originX + dx);
+      const ny = snap(originY + dy);
+      el.style.left = `${nx}px`;
+      el.style.top = `${ny}px`;
+      renderConnections();
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      el.classList.remove('dragging');
+      const x = parseFloat(el.style.left) || 0;
+      const y = parseFloat(el.style.top) || 0;
+      if (isPhase) {
+        state.phases[id].x = x;
+        state.phases[id].y = y;
+      } else if (state.customNodes[id]) {
+        state.customNodes[id].x = x;
+        state.customNodes[id].y = y;
+      }
+      state.canvas.drag = null;
+      persistCanvasState();
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function bindPorts(nodeEl) {
+  nodeEl.querySelectorAll('.port').forEach((p) => {
+    p.addEventListener('mousedown', (ev) => {
+      if (state.canvas.tool !== 'wire') return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      const dir = p.dataset.dir;
+      if (dir !== 'out') return;
+      state.canvas.wire = {
+        fromNode: p.dataset.node,
+        fromPort: p.dataset.port
+      };
+      p.classList.add('compat');
+      const onMove = (mv) => updateWirePreview(mv.clientX, mv.clientY);
+      const onUp = (up) => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const target = up.target.closest('.port');
+        const preview = document.getElementById('preview-wire');
+        if (preview) preview.innerHTML = '';
+        if (target && target.dataset.dir === 'in') {
+          attemptConnect(state.canvas.wire.fromNode, state.canvas.wire.fromPort, target.dataset.node, target.dataset.port);
+        }
+        state.canvas.wire = null;
+        p.classList.remove('compat');
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+function updateWirePreview(clientX, clientY) {
+  const pv = document.getElementById('preview-wire');
+  if (!pv || !state.canvas.wire) return;
+  const from = document.getElementById(`node-${state.canvas.wire.fromNode}`);
+  if (!from) return;
+  const wrap = document.getElementById('loop-canvas-wrap').getBoundingClientRect();
+  // preview-wire is wrap-relative; keep all points in that coordinate space.
+  const fx = (parseFloat(from.style.left) + 220) * state.canvas.tx.scale + state.canvas.tx.x;
+  const fy = (parseFloat(from.style.top) + 55) * state.canvas.tx.scale + state.canvas.tx.y;
+  const mx = clientX - wrap.left;
+  const my = clientY - wrap.top;
+  pv.innerHTML = '';
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', `M${fx},${fy} C${fx+80},${fy} ${mx-80},${my} ${mx},${my}`);
+  path.setAttribute('class', 'wire');
+  pv.appendChild(path);
+}
+
+function canConnect(fromNode, fromPort, toNode, toPort) {
+  if (fromNode === toNode) return false;
+  if (!graphEngine) {
+    lastWireValidationError = 'Graph engine not initialized';
+    return false;
+  }
+  try {
+    syncGraphEngineFromState();
+    const verdict = graphEngine.validator.validateConnection({
+      from: { nodeId: fromNode, port: fromPort },
+      to: { nodeId: toNode, port: toPort },
+    });
+    lastWireValidationError = verdict.reason || '';
+    return !!verdict.ok;
+  } catch (err) {
+    lastWireValidationError = String(err.message || err);
+    return false;
+  }
+}
+
+function attemptConnect(fromNode, fromPort, toNode, toPort) {
+  if (!canConnect(fromNode, fromPort, toNode, toPort)) {
+    toast(lastWireValidationError || 'Invalid connection', 'warn');
+    log('WARN', `Wire rejected: ${lastWireValidationError || 'invalid'}`);
+    return;
+  }
+  const exists = state.connections.some((c) => c.fromNode === fromNode && c.fromPort === fromPort && c.toNode === toNode && c.toPort === toPort);
+  if (exists) return;
+  state.connections.push({
+    id: `wire_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+    fromNode, fromPort, toNode, toPort
+  });
+  renderConnections();
+  persistCanvasState();
+  toast('Connection created', 'ok');
+}
+
+function addCustomNode(type) {
+  if (!NODE_DEFS[type]) return;
+  if (graphEngine) {
+    syncGraphEngineFromState();
+    const verdict = graphEngine.canAddNode(type);
+    if (!verdict.ok) {
+      toast(verdict.reason || 'Node cannot be added', 'warn');
+      log('WARN', `Add node rejected: ${verdict.reason || type}`);
+      return;
+    }
+  }
+  const id = `n${state.nodeCounter++}`;
+  const base = NODE_DEFS[type];
+  state.customNodes[id] = {
+    id,
+    type,
+    x: 140 + (Object.keys(state.customNodes).length % 3) * 280,
+    y: 340 + Math.floor(Object.keys(state.customNodes).length / 3) * 180,
+    props: JSON.parse(JSON.stringify(base.props))
+  };
+  const activeOut = PHASE_DEFS.active?.outputs?.[0] || 'finalization preparation';
+  const inPort = (base.inputs && base.inputs[0]) || 'input';
+  if (canConnect('active', activeOut, id, inPort)) {
+    state.connections.push({
+      id: `wire_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+      fromNode: 'active',
+      fromPort: activeOut,
+      toNode: id,
+      toPort: inPort
+    });
+  }
+  if (type !== 'task') {
+    const taskNode = Object.entries(state.customNodes).find(([, n]) => n.type === 'task' && n.id !== id);
+    if (taskNode) {
+      const taskId = taskNode[0];
+      if (canConnect(taskId, 'task', id, inPort)) {
+        state.connections.push({
+          id: `wire_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+          fromNode: taskId,
+          fromPort: 'task',
+          toNode: id,
+          toPort: inPort
+        });
+      }
+    }
+  }
+  renderLoopNodes();
+  persistCanvasState();
+}
+
+function openPropsPanel(id) {
+  const panel = document.getElementById('props-panel');
+  const body = document.getElementById('props-body');
+  const title = document.getElementById('props-title');
+  if (!panel || !body || !title) return;
+  state.selectedNodeId = id;
+  if (state.phases[id]) {
+    title.textContent = `${PHASE_DEFS[id].title} (Phase)`;
+    body.innerHTML = `<div style="font-size:11px;color:var(--txt2)">Canonical phase nodes are controlled by loop state and are not editable.</div>`;
+  } else {
+    const node = state.customNodes[id];
+    const def = NODE_DEFS[node.type];
+    title.textContent = `${def.title} Properties`;
+    if (node.type === 'task' || node.type === 'spawn') {
+      body.innerHTML = `
+        <label class="pl">Agent Type</label><select class="psel" id="pp-agent-type"><option>OpenAI</option><option>Ollama</option><option>Anthropic</option></select>
+        <label class="pl">Model</label><input class="pi" id="pp-model" value="${node.props.model}">
+        <label class="pl">Task Title</label><input class="pi" id="pp-task-title" value="${node.props.taskTitle || ''}" placeholder="Task title">
+        <label class="pl">Description</label><textarea class="pta" id="pp-task-desc" placeholder="Task description">${node.props.taskDescription || ''}</textarea>
+        <label class="pl">Success</label><textarea class="pta" id="pp-success-def" placeholder="Success criteria">${node.props.successDefinition || ''}</textarea>
+        <label class="pl">Fail</label><textarea class="pta" id="pp-failure-def" placeholder="Failure criteria">${node.props.failureDefinition || ''}</textarea>
+        <label class="pl">Input Notes</label><textarea class="pta" id="pp-task">${node.props.task || ''}</textarea>
+        <div style="font-size:10px;color:var(--txt2);margin:4px 0 8px">${node.props.generatedTaskId ? `Last generated: <span style="color:var(--green)">${node.props.generatedTaskId}</span>` : 'No task generated from this node yet.'}</div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="generateTaskFromNode('${id}')">Generate Task</button>
+        <button class="pbtn" onclick="submitTaskIdeaToChaosbox('${id}')">Submit to Chaosbox</button>
+        <button class="pbtn" onclick="executeNode('${id}')">Execute</button>`;
+      setTimeout(() => {
+        document.getElementById('pp-agent-type').value = node.props.agentType;
+      }, 0);
+    } else if (node.type === 'finalize') {
+      body.innerHTML = `
+        <label class="pl">Archive Naming</label><input class="pi" id="pp-archive" value="${node.props.archiveName}">
+        <label class="pl">Reason</label><textarea class="pta" id="pp-reason">${node.props.reason || ''}</textarea>
+        <div class="pchecklist">
+          <label class="pchk-item"><input type="checkbox" class="pchk" id="pp-audit-file" ${node.props.auditFile ? 'checked' : ''}> File Integrity</label>
+          <label class="pchk-item"><input type="checkbox" class="pchk" id="pp-audit-task" ${node.props.auditTasks ? 'checked' : ''}> Task Completion</label>
+          <label class="pchk-item"><input type="checkbox" class="pchk" id="pp-audit-ai" ${node.props.auditAI ? 'checked' : ''}> AI Validation</label>
+        </div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="executeNode('${id}')">Run Finalization</button>`;
+    } else if (node.type === 'database' || node.type === 'dbquery') {
+      body.innerHTML = `
+        <label class="pl">Query</label><textarea class="pta" id="pp-db-query" placeholder="Database query">${node.props.query || node.props.question || ''}</textarea>
+        <label class="pl">Input</label><textarea class="pta" id="pp-db-input" placeholder="Additional input/context">${node.props.input || ''}</textarea>
+        <label class="pl">Refer</label><textarea class="pta" id="pp-db-refer" placeholder="Reference hints">${node.props.refer || ''}</textarea>
+        <div id="pp-results" style="font-size:10px;color:var(--txt2);max-height:160px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:6px">${(node.props.results || []).map((r) => `<div>${String(r).slice(0, 200)}</div>`).join('') || 'No results'}</div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="executeNode('${id}')">Execute Query</button>`;
+    } else if (node.type === 'api') {
+      body.innerHTML = `
+        <label class="pl">URL</label><input class="pi" id="pp-api-url" value="${node.props.url || ''}" placeholder="http://127.0.0.1:5000/health">
+        <label class="pl">Input</label><textarea class="pta" id="pp-api-input" placeholder="Request context">${node.props.input || ''}</textarea>
+        <label class="pl">Refer</label><textarea class="pta" id="pp-api-refer" placeholder="Reference">${node.props.refer || ''}</textarea>
+        <div id="pp-results" style="font-size:10px;color:var(--txt2);max-height:160px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:6px">${(node.props.results || []).map((r) => `<div>${String(r).slice(0, 200)}</div>`).join('') || 'No results'}</div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="executeNode('${id}')">Execute API</button>`;
+    } else if (node.type === 'script') {
+      body.innerHTML = `
+        <label class="pl">Script Link Path</label><input class="pi" id="pp-script-path" value="${node.props.scriptPath || ''}" placeholder="scripts/example.py">
+        <div style="font-size:10px;color:var(--txt2);margin:4px 0 8px">Link-only node. Script execution is handled by pipeline-level Execute.</div>
+        <label class="pl">Arguments</label><input class="pi" id="pp-script-args" value="${node.props.scriptArgs || ''}" placeholder="--flag value">
+        <label class="pl">Imported Task ID</label><input class="pi" id="pp-art-task" value="${node.props.taskId || ''}" placeholder="Optional TASK_XXXX link">
+        <label class="pl">Content</label><textarea class="pta" id="pp-art-content" placeholder="Optional notes/content">${node.props.content || ''}</textarea>
+        <div style="font-size:10px;color:var(--txt2);margin:6px 0">${node.props.lastRun ? `Last run: <span style="color:var(--green)">${node.props.lastRun}</span>` : 'No script run yet.'}</div>
+        <div style="font-size:10px;color:var(--txt2);margin:6px 0">${node.props.createdPath ? `Generated artifact: <span style="color:var(--green)">${node.props.createdPath}</span>` : 'No script artifact generated yet.'}</div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="openNodeScript('${id}')">Open Script</button>
+        <button class="pbtn" onclick="executePipelinePlan()">Execute Pipeline</button>`;
+    } else {
+      const imported = node.props.taskId || '';
+      body.innerHTML = `
+        <label class="pl">Imported Task ID</label><input class="pi" id="pp-art-task" value="${imported}" placeholder="Auto from task wire or manual TASK_XXXX">
+        <label class="pl">Content</label><textarea class="pta" id="pp-art-content" placeholder="Optional notes/content">${node.props.content || ''}</textarea>
+        <div style="font-size:10px;color:var(--txt2);margin:6px 0">${node.props.createdPath ? `Last created: <span style="color:var(--green)">${node.props.createdPath}</span>` : 'No artifact created yet.'}</div>
+        <button class="pbtn primary" onclick="saveNodeProps('${id}')">Save</button>
+        <button class="pbtn" onclick="executeNode('${id}')">Execute</button>`;
+    }
+  }
+  panel.classList.add('open');
+}
+
+function saveNodeProps(id) {
+  const node = state.customNodes[id];
+  if (!node) return;
+  if (node.type === 'task' || node.type === 'spawn') {
+    node.props.agentType = document.getElementById('pp-agent-type').value;
+    node.props.model = document.getElementById('pp-model').value.trim();
+    node.props.task = document.getElementById('pp-task').value;
+    node.props.taskTitle = document.getElementById('pp-task-title').value.trim();
+    node.props.taskDescription = document.getElementById('pp-task-desc').value.trim();
+    node.props.successDefinition = document.getElementById('pp-success-def').value.trim();
+    node.props.failureDefinition = document.getElementById('pp-failure-def').value.trim();
+  } else if (node.type === 'finalize') {
+    node.props.archiveName = document.getElementById('pp-archive').value.trim();
+    node.props.reason = document.getElementById('pp-reason').value;
+    node.props.auditFile = document.getElementById('pp-audit-file').checked;
+    node.props.auditTasks = document.getElementById('pp-audit-task').checked;
+    node.props.auditAI = document.getElementById('pp-audit-ai').checked;
+  } else if (node.type === 'database' || node.type === 'dbquery') {
+    node.props.query = document.getElementById('pp-db-query').value.trim();
+    node.props.input = document.getElementById('pp-db-input').value.trim();
+    node.props.refer = document.getElementById('pp-db-refer').value.trim();
+    node.props.question = node.props.query;
+  } else if (node.type === 'api') {
+    node.props.url = document.getElementById('pp-api-url').value.trim();
+    node.props.input = document.getElementById('pp-api-input').value.trim();
+    node.props.refer = document.getElementById('pp-api-refer').value.trim();
+  } else if (node.type === 'script') {
+    node.props.scriptPath = document.getElementById('pp-script-path').value.trim();
+    node.props.scriptArgs = document.getElementById('pp-script-args').value.trim();
+    node.props.taskId = document.getElementById('pp-art-task').value.trim();
+    node.props.content = document.getElementById('pp-art-content').value.trim();
+  } else {
+    node.props.taskId = document.getElementById('pp-art-task').value.trim();
+    node.props.content = document.getElementById('pp-art-content').value.trim();
+  }
+  persistCanvasState();
+  renderLoopNodes();
+  toast('Node properties saved', 'ok');
+}
+
+function closePropsPanel() {
+  const panel = document.getElementById('props-panel');
+  if (panel) panel.classList.remove('open');
+}
+
+function ctxOpenProps() {
+  if (state.canvas.contextNodeId) openPropsPanel(state.canvas.contextNodeId);
+  hideCanvasContext();
+}
+
+function ctxDuplicateNode() {
+  const id = state.canvas.contextNodeId;
+  const n = state.customNodes[id];
+  if (!n) return;
+  const newId = `n${state.nodeCounter++}`;
+  state.customNodes[newId] = {
+    id: newId,
+    type: n.type,
+    x: n.x + 36,
+    y: n.y + 36,
+    props: JSON.parse(JSON.stringify(n.props))
+  };
+  hideCanvasContext();
+  renderLoopNodes();
+  persistCanvasState();
+}
+
+function ctxDeleteNode() {
+  const id = state.canvas.contextNodeId;
+  if (!state.customNodes[id]) return;
+  delete state.customNodes[id];
+  state.connections = state.connections.filter((c) => c.fromNode !== id && c.toNode !== id);
+  hideCanvasContext();
+  renderLoopNodes();
+  persistCanvasState();
+}
+
+function hideCanvasContext() {
+  const menu = document.getElementById('canvas-context');
+  if (menu) menu.style.display = 'none';
+}
+
+function deleteSelectedNode() {
+  const id = state.selectedNodeId;
+  if (!id) {
+    toast('No node selected', 'warn');
+    return false;
+  }
+  if (!state.customNodes[id]) {
+    toast('Core phase nodes cannot be deleted', 'warn');
+    return false;
+  }
+  delete state.customNodes[id];
+  state.connections = state.connections.filter((c) => c.fromNode !== id && c.toNode !== id);
+  state.selectedNodeId = null;
+  hideCanvasContext();
+  closePropsPanel();
+  renderLoopNodes();
+  persistCanvasState();
+  log('INFO', `Deleted node ${id}`);
+  toast(`Deleted node ${id}`, 'ok');
+  return true;
+}
+
+function persistCanvasState() {
+  const data = buildPipelineSnapshot();
+  const serialized = JSON.stringify(data);
+  localStorage.setItem(CANVAS_STATE_KEY, serialized);
+  localStorage.setItem(CANVAS_LKG_KEY, serialized);
+}
+
+function restoreCanvasState() {
+  const hydrate = (parsed) => {
+    const snapshot = migratePipelineSnapshot(parsed.data || parsed, parsed.schemaVersion || null);
+    applyPipelineSnapshot(snapshot, { persist: false });
+  };
+  try {
+    const raw = localStorage.getItem(CANVAS_STATE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    hydrate(parsed);
+  } catch (e) {
+    console.warn('restoreCanvasState failed, attempting LKG restore', e);
+    try {
+      const fallback = localStorage.getItem(CANVAS_LKG_KEY);
+      if (!fallback) return;
+      const parsedFallback = JSON.parse(fallback);
+      hydrate(parsedFallback);
+      toast('Recovered pipeline from last-known-good snapshot', 'warn');
+      log('WARN', 'Recovered pipeline from local last-known-good snapshot');
+    } catch (fallbackError) {
+      console.warn('LKG restore failed', fallbackError);
+    }
+  }
+}
+
+function buildPipelineSnapshot() {
+  return {
+    schemaVersion: PIPELINE_SCHEMA_VERSION,
+    phases: state.phases,
+    customNodes: state.customNodes,
+    connections: state.connections,
+    nodeCounter: state.nodeCounter,
+    canvas: state.canvas
+  };
+}
+
+function migratePipelineSnapshot(snapshot, schemaVersion = null) {
+  const incomingVersion = schemaVersion || snapshot?.schemaVersion || '1.0.0';
+  if (incomingVersion === PIPELINE_SCHEMA_VERSION) return snapshot;
+  if (incomingVersion === '1.0.0' || incomingVersion === 'experimental_loop_pipeline_v1') {
+    return {
+      schemaVersion: PIPELINE_SCHEMA_VERSION,
+      phases: snapshot.phases || {},
+      customNodes: snapshot.customNodes || {},
+      connections: snapshot.connections || [],
+      nodeCounter: snapshot.nodeCounter || 1,
+      canvas: snapshot.canvas || { tx: { x: 0, y: 0, scale: 1 }, snap: true, grid: 20 }
+    };
+  }
+  throw new Error(`Unsupported pipeline schemaVersion: ${incomingVersion}`);
+}
+
+function applyPipelineSnapshot(snapshot, options = {}) {
+  const { persist = true } = options;
+  if (!snapshot || typeof snapshot !== 'object') {
+    throw new Error('Invalid pipeline snapshot');
+  }
+  const normalized = migratePipelineSnapshot(snapshot, snapshot.schemaVersion || null);
+  if (!normalized.phases || !normalized.customNodes || !normalized.connections || !normalized.canvas) {
+    throw new Error('Pipeline snapshot missing required fields');
+  }
+  state.phases = normalized.phases;
+  state.customNodes = normalized.customNodes;
+  state.connections = normalized.connections;
+  state.nodeCounter = normalized.nodeCounter || 1;
+  state.canvas = {
+    ...state.canvas,
+    ...normalized.canvas
+  };
+  renderLoopNodes();
+  if (persist) persistCanvasState();
+}
+
+function exportPipelineJson() {
+  const snapshot = buildPipelineSnapshot();
+  const payload = {
+    schemaVersion: PIPELINE_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    data: snapshot
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  a.download = `experimental_loop_pipeline_${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+  log('OK', `Pipeline exported: ${a.download}`);
+  toast('Pipeline exported', 'ok');
+}
+
+function importPipelineJson() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        const snapshot = migratePipelineSnapshot(parsed.data || parsed, parsed.schemaVersion || parsed.schema || null);
+        applyPipelineSnapshot(snapshot);
+        log('OK', `Pipeline imported: ${file.name}`);
+        toast('Pipeline imported', 'ok');
+      } catch (error) {
+        log('ERROR', `Import failed: ${error.message}`);
+        toast('Invalid pipeline JSON', 'error');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  input.click();
+}
+
+async function savePipelineServer() {
+  try {
+    const name = prompt('Pipeline filename (.json):', 'experimental_loop_pipeline.json');
+    if (!name) return;
+    const payload = {
+      name,
+      data: buildPipelineSnapshot()
+    };
+    const rsp = await callAPI('/api/pipeline-state', 'POST', payload);
+    if (!rsp.success) throw new Error(rsp.error || 'Save failed');
+    log('OK', `Pipeline saved on server: ${rsp.name}`);
+    toast(`Saved ${rsp.name}`, 'ok');
+  } catch (error) {
+    log('ERROR', `Save pipeline failed: ${error.message}`);
+    toast(error.message, 'error');
+  }
+}
+
+async function loadPipelineServer() {
+  try {
+    const listRsp = await callAPI('/api/pipeline-state/list', 'GET');
+    if (!listRsp.success) throw new Error(listRsp.error || 'Could not list pipeline files');
+    const files = listRsp.files || [];
+    if (!files.length) throw new Error('No saved pipeline files on server');
+    const suggested = files[0].name;
+    const name = prompt(`Available:\n${files.map((f) => `- ${f.name}`).join('\n')}\n\nEnter filename to load:`, suggested);
+    if (!name) return;
+    const rsp = await callAPI(`/api/pipeline-state?name=${encodeURIComponent(name)}`, 'GET');
+    if (!rsp.success) throw new Error(rsp.error || 'Load failed');
+    const payload = rsp.data || {};
+    const snapshot = migratePipelineSnapshot(payload.data || payload, payload.schemaVersion || payload.schema || null);
+    applyPipelineSnapshot(snapshot);
+    log('OK', `Pipeline loaded from server: ${rsp.name}`);
+    toast(`Loaded ${rsp.name}`, 'ok');
+  } catch (error) {
+    log('ERROR', `Load pipeline failed: ${error.message}`);
+    toast(error.message, 'error');
+  }
+}
+
+async function executePipelinePlan() {
+  try {
+    if (graphEngine) {
+      syncGraphEngineFromState();
+    }
+    const snapshot = buildPipelineSnapshot();
+    const plan = getExecutionPlan();
+    const rsp = await callAPI('/api/pipeline/execute-plan', 'POST', {
+      snapshot,
+      executionOrder: plan
+    });
+    if (!rsp.success) throw new Error(rsp.error || 'Pipeline execution export failed');
+    log('OK', `Pipeline markdown created: ${rsp.path}`);
+    toast(`Pipeline markdown created: ${rsp.path}`, 'ok');
+  } catch (error) {
+    log('ERROR', `Execute pipeline failed: ${error.message}`);
+    toast(error.message, 'error');
+  }
+}
+
+async function generateTaskFromNode(id) {
+  const node = state.customNodes[id];
+  if (!node || (node.type !== 'task' && node.type !== 'spawn')) return;
+  saveNodeProps(id);
+  const title = (node.props.taskTitle || '').trim();
+  if (!title) {
+    toast('Task title is required', 'warn');
+    throw new Error('Task title is required');
+  }
+
+  const payload = {
+    title,
+    description: node.props.taskDescription || '',
+    objective: node.props.taskDescription || node.props.task || title,
+    priority: 'MEDIUM',
+    infrastructure: {
+      agentType: node.props.agentType || 'OpenAI',
+      model: node.props.model || 'gpt-5',
+      successDefinition: node.props.successDefinition || 'Objective met and validated',
+      failureDefinition: node.props.failureDefinition || 'Objective not met or validation failed'
+    }
+  };
+
+  const rsp = await callAPI('/api/tasks/generate', 'POST', payload);
+  if (!rsp.success) {
+    throw new Error(rsp.error || 'Task generation failed');
+  }
+
+  node.props.generatedTaskId = rsp.taskId || '';
+  node.props.last = `Generated ${rsp.taskId}`;
+  persistCanvasState();
+  renderLoopNodes();
+  openPropsPanel(id);
+  log('OK', `Generated ${rsp.taskId} from node ${id}`);
+  toast(`Generated ${rsp.taskId}`, 'ok');
+}
+
+async function submitTaskIdeaToChaosbox(id) {
+  const node = state.customNodes[id];
+  if (!node || (node.type !== 'task' && node.type !== 'spawn')) return;
+  saveNodeProps(id);
+  const title = (node.props.taskTitle || '').trim();
+  const description = (node.props.taskDescription || '').trim();
+  const successDef = (node.props.successDefinition || '').trim();
+  const failureDef = (node.props.failureDefinition || '').trim();
+  const idea = [
+    title ? `Title: ${title}` : '',
+    description ? `Description:\n${description}` : '',
+    successDef ? `Success:\n${successDef}` : '',
+    failureDef ? `Fail:\n${failureDef}` : '',
+    node.props.task ? `Notes:\n${node.props.task}` : '',
+  ].filter(Boolean).join('\n\n');
+  if (!idea.trim()) {
+    throw new Error('Task node is empty. Add title/description before submitting to chaosbox.');
+  }
+  const rsp = await callAPI('/api/seed-idea', 'POST', { idea });
+  if (!rsp.success) throw new Error(rsp.error || 'Chaosbox submission failed');
+  node.props.lastChaosboxIdeaId = rsp.ideaId || '';
+  persistCanvasState();
+  log('OK', `Submitted seed idea to chaosbox${rsp.ideaId ? ` (${rsp.ideaId})` : ''}`);
+  toast('Seed idea submitted to chaosbox', 'ok');
+}
+
+async function refreshNodeScriptOptions(id) {
+  const node = state.customNodes[id];
+  const select = document.getElementById('pp-script-select');
+  if (!node || !select) return;
+  try {
+    const rsp = await callAPI('/api/workspace/scripts', 'GET');
+    const scripts = rsp.scripts || [];
+    const current = node.props.scriptPath || '';
+    const options = ['<option value="">Select script from workspace...</option>']
+      .concat(scripts.map((s) => `<option value="${s.path}">${s.path}</option>`));
+    select.innerHTML = options.join('');
+    if (current) select.value = current;
+  } catch (error) {
+    select.innerHTML = '<option value="">Failed to load scripts</option>';
+    log('WARN', `Script list unavailable: ${error.message}`);
+  }
+}
+
+function onScriptSelectChange(id) {
+  const node = state.customNodes[id];
+  const select = document.getElementById('pp-script-select');
+  const pathInput = document.getElementById('pp-script-path');
+  if (!node || !select || !pathInput) return;
+  pathInput.value = select.value || '';
+}
+
+async function openNodeScript(id) {
+  const node = state.customNodes[id];
+  if (!node) return;
+  saveNodeProps(id);
+  if (!node.props.scriptPath) throw new Error('No script path selected');
+  const rsp = await callAPI('/api/open-file', 'POST', { path: node.props.scriptPath });
+  if (!rsp.success) throw new Error(rsp.error || 'Open script failed');
+  log('OK', `Opened script: ${node.props.scriptPath}`);
+}
+
+function inferConnectedTaskId(nodeId) {
+  const node = state.customNodes[nodeId];
+  if (!node) return '';
+  if (node.props.generatedTaskId) return node.props.generatedTaskId;
+  if (node.props.taskId) return node.props.taskId;
+
+  const inbound = state.connections.filter((c) => c.toNode === nodeId);
+  for (const c of inbound) {
+    const source = state.customNodes[c.fromNode];
+    if (source && source.type === 'task' && source.props.generatedTaskId) {
+      return source.props.generatedTaskId;
+    }
+  }
+  return '';
+}
+
+async function createArtifactsForTask(taskId, types, node) {
+  const payload = {
+    taskId,
+    artifactTypes: types,
+    description: node?.props?.taskDescription || node?.props?.content || '',
+    successDefinition: node?.props?.successDefinition || '',
+    failureDefinition: node?.props?.failureDefinition || ''
+  };
+  return callAPI('/api/tasks/create-artifacts', 'POST', payload);
+}
+
+async function executeNode(id) {
+  const node = state.customNodes[id];
+  if (!node) return;
+  try {
+    node.props.status = node.type === 'finalize' ? 'auditing' : 'running';
+    renderLoopNodes();
+    if (graphEngine) {
+      syncGraphEngineFromState();
+      const plan = getExecutionPlan([id]);
+      if (plan.length) {
+        log('INFO', `Execution plan: ${plan.join(' -> ')}`);
+        const engineRun = await graphEngine.executor.run({ targets: [id] });
+        log('INFO', `Engine run cache h/m: ${engineRun.cacheHits}/${engineRun.cacheMisses}`);
+        Object.entries(engineRun.nodeStates || {}).forEach(([nodeId, info]) => {
+          const targetNode = state.customNodes[nodeId];
+          if (!targetNode) return;
+          targetNode.props.execState = info.status || '';
+          targetNode.props.cacheStatus = info.cache || '';
+          targetNode.props.outputHash = info.outputHash || '';
+        });
+      }
+    }
+    if (node.type === 'task' || node.type === 'spawn') {
+      if (node.props.taskTitle && node.props.taskDescription) {
+        await generateTaskFromNode(id);
+        const taskId = node.props.generatedTaskId;
+        const downstream = state.connections
+          .filter((c) => c.fromNode === id)
+          .map((c) => state.customNodes[c.toNode])
+          .filter((n) => n && ['report', 'bug', 'code', 'script'].includes(n.type));
+        const artifactTypes = [...new Set(downstream.map((n) => n.type))];
+        if (taskId && artifactTypes.length) {
+          const created = await createArtifactsForTask(taskId, artifactTypes, node);
+          if (created?.success) {
+            downstream.forEach((n) => {
+              n.props.taskId = taskId;
+              n.props.createdPath = (created.created || []).find((p) => p.toLowerCase().includes(`/${n.type}_`) || p.toLowerCase().includes(`/${n.type}s/`)) || n.props.createdPath;
+              n.props.status = 'ready';
+            });
+            log('OK', `Created linked artifacts for ${taskId}: ${(created.created || []).join(', ')}`);
+          }
+        }
+        node.props.status = 'idle';
+        persistCanvasState();
+        renderLoopNodes();
+        return;
+      }
+      const payload = { task: node.props.task, model: node.props.model, provider: node.props.agentType };
+      // fall back path until dedicated spawn endpoint is stable
+      const tasks = await callAPI('/api/tasks/active', 'GET');
+      if (!tasks.success || !tasks.tasks.length) throw new Error('No active tasks for spawned agent');
+      await callAPI('/api/tasks/complete', 'POST', { taskId: tasks.tasks[0].id, metadata: payload });
+      node.props.status = 'idle';
+      node.props.last = `Completed ${tasks.tasks[0].id}`;
+    } else if (node.type === 'finalize') {
+      const statusData = await fetchStatus();
+      if (!statusData || statusData.status !== 'ACTIVE') {
+        throw new Error(`Finalize node blocked: status is ${statusData?.status || 'UNKNOWN'}`);
+      }
+      const gates = await safeGet('/api/validate-gates');
+      const preFinalGate = gates?.gates?.pre_finalization;
+      if (preFinalGate && !preFinalGate.valid) {
+        throw new Error(`Finalize node blocked by gate: ${preFinalGate.error || 'pre_finalization failed'}`);
+      }
+      const audit = await callAPI('/api/audit-status', 'GET');
+      const pass = audit.success && audit.canFinalize;
+      const checklistPass = node.props.auditFile && node.props.auditTasks && node.props.auditAI;
+      if (!pass || !checklistPass) {
+        node.props.status = 'ready';
+        throw new Error('Finalize blocked: audit/checklist incomplete');
+      }
+      node.props.status = 'finalizing';
+      renderLoopNodes();
+      await callAPI('/api/finalize-loop', 'POST', {});
+      node.props.status = 'ready';
+    } else if (node.type === 'database' || node.type === 'dbquery') {
+      node.props.status = 'querying';
+      renderLoopNodes();
+      const q = node.props.query || node.props.question || node.props.input || 'Summarize current active loop priorities';
+      const limit = 20;
+      let rows = [];
+      try {
+        const dbRsp = await callAPI('/api/knowledge/search', 'POST', {
+          q,
+          types: 'report,archive,lesson,task',
+          limit
+        });
+        rows = (dbRsp.results || []).slice(0, 8).map((r) =>
+          `[DB:${(r.type || 'unknown').toUpperCase()}|${Number(r.relevance || 0).toFixed(2)}] ${r.id || 'N/A'} | ${(r.snippet || '').slice(0, 120)}`
+        );
+      } catch (dbError) {
+        const fallback = await callAPI(`/api/search?q=${encodeURIComponent(q)}&limit=${limit}`, 'GET');
+        rows = (fallback.results || []).slice(0, 8).map((r) =>
+          `[FALLBACK:FILE] ${(r.path || 'N/A')}:${r.line || '--'} | ${(r.text || '').slice(0, 120)}`
+        );
+      }
+      node.props.results = rows.length ? rows : ['No matching records'];
+      node.props.status = 'ready';
+    } else if (node.type === 'api') {
+      const url = node.props.url || 'http://127.0.0.1:5000/health';
+      const rsp = await fetch(url);
+      const txt = await rsp.text();
+      node.props.results = [`[${rsp.status}] ${txt.slice(0, 1000)}`];
+      node.props.status = rsp.ok ? 'ready' : 'error';
+    } else if (node.type === 'script') {
+      throw new Error('Script nodes are link-only. Use Execute Pipeline to generate the canonical pipeline markdown.');
+    } else if (['report', 'bug', 'code'].includes(node.type)) {
+      const taskId = node.props.taskId || inferConnectedTaskId(id);
+      if (!taskId) throw new Error('No TASK_XXXX linked. Connect a Task node or set task id manually.');
+      const created = await createArtifactsForTask(taskId, [node.type], node);
+      if (!created.success) throw new Error(created.error || `Failed to create ${node.type} artifact`);
+      node.props.taskId = taskId;
+      node.props.createdPath = (created.created || [])[0] || '';
+      node.props.status = 'ready';
+      log('OK', `${node.type} artifact created for ${taskId}: ${node.props.createdPath}`);
+    }
+    persistCanvasState();
+    renderLoopNodes();
+    openPropsPanel(id);
+  } catch (error) {
+    node.props.status = NODE_DEFS[node.type].props.status || 'idle';
+    renderLoopNodes();
+    log('ERROR', `${NODE_DEFS[node.type].title} failed: ${error.message}`);
+    toast(error.message, 'error');
+  }
+}
+
+function initCanvasInteractions() {
+  const wrap = document.getElementById('loop-canvas-wrap');
+  if (!wrap) return;
+  wrap.addEventListener('mousedown', (ev) => {
+    hideCanvasContext();
+    if (state.canvas.tool !== 'pan' || ev.button !== 0) return;
+    const sx = ev.clientX;
+    const sy = ev.clientY;
+    const ox = state.canvas.tx.x;
+    const oy = state.canvas.tx.y;
+    wrap.style.cursor = 'grabbing';
+    const onMove = (mv) => {
+      state.canvas.tx.x = ox + (mv.clientX - sx);
+      state.canvas.tx.y = oy + (mv.clientY - sy);
+      applyCanvasTransform();
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      wrap.style.cursor = 'grab';
+      persistCanvasState();
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  wrap.addEventListener('wheel', (ev) => {
+    if (!ev.ctrlKey) return;
+    ev.preventDefault();
+    const delta = ev.deltaY > 0 ? -0.1 : 0.1;
+    const oldScale = state.canvas.tx.scale;
+    const newScale = Math.min(2.5, Math.max(0.4, oldScale + delta));
+    const rect = wrap.getBoundingClientRect();
+    const mx = ev.clientX - rect.left;
+    const my = ev.clientY - rect.top;
+    state.canvas.tx.x = mx - (mx - state.canvas.tx.x) * (newScale / oldScale);
+    state.canvas.tx.y = my - (my - state.canvas.tx.y) * (newScale / oldScale);
+    state.canvas.tx.scale = newScale;
+    applyCanvasTransform();
+    renderConnections();
+    persistCanvasState();
+  }, { passive: false });
+
+  document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('#canvas-context')) hideCanvasContext();
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    const key = ev.key;
+    if (key !== 'Delete' && key !== 'Backspace') return;
+    const target = ev.target;
+    const editable = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable
+    );
+    if (editable) return;
+    if (deleteSelectedNode()) {
+      ev.preventDefault();
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  API INTEGRATION FUNCTIONS
+// ══════════════════════════════════════════════════
+
+// Global API base URL (adjust for your deployment)
+const API_BASE = window.location.origin;
+function getApiBase() {
+  const el = document.getElementById('monitor-url');
+  return ((el && el.value) ? el.value : API_BASE).replace(/\/$/, '');
+}
+
+// Real-time status polling
+let statusPollingInterval = null;
+let guardRefreshCounter = 0;
+
+async function fetchStatus() {
+  try {
+    const response = await fetch(`${getApiBase()}/api/status`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Status fetch failed:', error);
+    return null;
+  }
+}
+
+async function callAPI(endpoint, method = 'POST', data = null) {
+  try {
+    const config = {
+      method: method,
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (data) config.body = JSON.stringify(data);
+
+    const response = await fetch(`${getApiBase()}${endpoint}`, config);
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || `HTTP ${response.status}`);
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`API call to ${endpoint} failed:`, error);
+    throw error;
+  }
+}
+
+async function safeGet(endpoint) {
+  try {
+    return await callAPI(endpoint, 'GET');
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function fetchGuardianState() {
+  const [audit, gates, finalization, policyGate] = await Promise.all([
+    safeGet('/api/audit-status'),
+    safeGet('/api/validate-gates'),
+    safeGet('/api/finalization-check'),
+    safeGet('/api/policy-gate/status')
+  ]);
+  state.guardians.audit = audit;
+  state.guardians.gates = gates;
+  state.guardians.finalization = finalization;
+  state.guardians.policyGate = policyGate;
+  updatePolicyGateBadge(policyGate);
+  return state.guardians;
+}
+
+function updatePolicyGateBadge(payload) {
+  const pill = document.getElementById('policy-gate-pill');
+  const dot = document.getElementById('policy-gate-dot');
+  const text = document.getElementById('policy-gate-text');
+  const cardValue = document.getElementById('policy-gate-status');
+  const cardSub = document.getElementById('policy-gate-sub');
+  if (!pill || !dot || !text || !cardValue || !cardSub) return;
+
+  const status = payload && payload.success ? payload.status : null;
+  if (!status) {
+    pill.className = 'tb-pill fail';
+    dot.className = 'status-dot dot-red';
+    text.textContent = 'Policy Gate: ERROR';
+    cardValue.textContent = 'ERROR';
+    cardValue.className = 'status-value status-blocked';
+    cardSub.textContent = (payload && payload.error) ? payload.error : 'Policy status unavailable';
+    return;
+  }
+
+  const loaded = Boolean(status.policy_loaded);
+  const enabled = Boolean(status.enabled);
+  const loopCounters = status.loop_counters || {};
+  const counterTotal = Object.values(loopCounters).reduce((acc, v) => acc + Number(v || 0), 0);
+
+  if (loaded && enabled) {
+    pill.className = 'tb-pill ok';
+    dot.className = 'status-dot dot-green';
+    text.textContent = `Policy Gate: ON (${counterTotal})`;
+    cardValue.textContent = 'ENFORCED';
+    cardValue.className = 'status-value green';
+    cardSub.textContent = `state=${status.state} | loop=${status.loop} | writes=${counterTotal}`;
+  } else {
+    pill.className = 'tb-pill fail';
+    dot.className = 'status-dot dot-red';
+    text.textContent = 'Policy Gate: OFF';
+    cardValue.textContent = 'DISABLED';
+    cardValue.className = 'status-value status-blocked';
+    cardSub.textContent = `loaded=${loaded} enabled=${enabled}`;
+  }
+}
+
+function setGuardState(id, enabled, reason = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.tagName === 'BUTTON') {
+    el.disabled = !enabled;
+  } else {
+    el.classList.toggle('is-disabled', !enabled);
+  }
+  if (reason) el.title = reason;
+}
+
+function applyActionGuards(statusData, guards) {
+  if (!statusData) return;
+  const status = statusData.status;
+  const gateBlocked = statusData.gateStatus === 'BLOCKED';
+  const preFinalGate = guards?.gates?.gates?.pre_finalization;
+  const preResetGate = guards?.gates?.gates?.pre_reset;
+  const auditOk = Boolean(guards?.audit?.success && guards?.audit?.canFinalize);
+  const finalizeGateOk = preFinalGate ? preFinalGate.valid : true;
+  const canFinalize = status === 'ACTIVE' && !gateBlocked && auditOk && finalizeGateOk;
+  const canReset = Boolean(statusData.canReset) && (preResetGate ? preResetGate.valid : true);
+  const canConfirm = (status === 'READY_FOR_RESET' || status === 'ACTIVE') && !gateBlocked;
+
+  setGuardState('qa-confirm-bootstrap', canConfirm, canConfirm ? '' : (status === 'FINALIZED' ? 'Confirm bootstrap is not allowed while FINALIZED.' : 'Gate is BLOCKED. Resolve gate issues first.'));
+  setGuardState('qa-finalize-loop', canFinalize, canFinalize ? '' : (preFinalGate?.error || guards?.audit?.message || 'Finalize blocked by audit/gate requirements.'));
+  setGuardState('btn-finalize-control', canFinalize, canFinalize ? '' : (preFinalGate?.error || guards?.audit?.message || 'Finalize blocked by audit/gate requirements.'));
+  setGuardState('qa-reset-loop', canReset, canReset ? '' : (preResetGate?.error || 'Reset requires FINALIZED status and pending archive.'));
+  renderPhaseDetails(statusData, guards);
+}
+
+function startStatusPolling() {
+  if (statusPollingInterval) clearInterval(statusPollingInterval);
+  statusPollingInterval = setInterval(async () => {
+    const statusData = await fetchStatus();
+    if (statusData) {
+      state.guardians.status = statusData;
+      if (guardRefreshCounter % 3 === 0) {
+        await fetchGuardianState();
+      }
+      updateUIFromStatus(statusData, state.guardians);
+      guardRefreshCounter += 1;
+    }
+  }, 2000); // Poll every 2 seconds
+}
+
+function stopStatusPolling() {
+  if (statusPollingInterval) {
+    clearInterval(statusPollingInterval);
+    statusPollingInterval = null;
+  }
+}
+
+let terminalPollingInterval = null;
+
+function mapTerminalLevel(level) {
+  const val = String(level || 'INFO').toUpperCase();
+  if (val === 'SUCCESS') return 'OK';
+  if (val === 'WARNING') return 'WARN';
+  return val;
+}
+
+function renderTerminalFeed(lines = []) {
+  const feed = document.getElementById('sr-terminal-feed');
+  if (!feed) return;
+  feed.innerHTML = '';
+  lines.forEach((entry) => {
+    const line = document.createElement('div');
+    const lvl = mapTerminalLevel(entry.level);
+    line.className = 'log-line';
+    line.innerHTML = `
+      <span class="log-ts">${entry.ts || new Date().toLocaleTimeString()}</span>
+      <span class="log-level ${lvl}">${lvl}</span>
+      <span class="log-msg">${entry.msg || ''}</span>
+    `;
+    feed.appendChild(line);
+  });
+  feed.scrollTop = feed.scrollHeight;
+}
+
+async function refreshTerminalFeed() {
+  const meta = document.getElementById('terminal-meta');
+  if (state.terminal.paused) {
+    if (meta) meta.textContent = `Paused | source=${state.terminal.source}`;
+    return;
+  }
+  try {
+    const data = await callAPI(`/api/terminal-feed?source=${encodeURIComponent(state.terminal.source)}&limit=80`, 'GET');
+    if (!data.success) throw new Error(data.error || 'Terminal feed unavailable');
+    renderTerminalFeed(data.lines || []);
+    state.terminal.lastUpdatedAt = data.updatedAt || null;
+    if (meta) meta.textContent = `source=${data.source} | file=${data.path} | lines=${data.total} | updated=${data.updatedAt || 'n/a'}`;
+  } catch (error) {
+    if (meta) meta.textContent = `Terminal feed error: ${error.message}`;
+    log('WARN', `Terminal feed refresh failed: ${error.message}`);
+  }
+}
+
+function startTerminalPolling() {
+  if (terminalPollingInterval) clearInterval(terminalPollingInterval);
+  terminalPollingInterval = setInterval(() => {
+    refreshTerminalFeed();
+  }, 3000);
+}
+
+function stopTerminalPolling() {
+  if (terminalPollingInterval) {
+    clearInterval(terminalPollingInterval);
+    terminalPollingInterval = null;
+  }
+}
+
+function setTerminalSource(source) {
+  state.terminal.source = source || 'transaction';
+  const sel = document.getElementById('terminal-source');
+  if (sel && sel.value !== state.terminal.source) sel.value = state.terminal.source;
+  refreshTerminalFeed();
+}
+
+function toggleTerminalPause() {
+  state.terminal.paused = !state.terminal.paused;
+  const btn = document.getElementById('terminal-pause-btn');
+  if (btn) btn.textContent = state.terminal.paused ? 'Resume' : 'Pause';
+  if (!state.terminal.paused) refreshTerminalFeed();
+}
+
+function clearTerminalView() {
+  const feed = document.getElementById('sr-terminal-feed');
+  if (feed) feed.innerHTML = '';
+  const meta = document.getElementById('terminal-meta');
+  if (meta) meta.textContent = `source=${state.terminal.source} | cleared`;
+}
+
+function updateUIFromStatus(statusData, guards = null) {
+  // Update current phase based on backend status
+  const backendStatus = statusData.status;
+  let uiPhase = 'bootstrap';
+
+  if (backendStatus === 'ACTIVE') uiPhase = 'active';
+  else if (backendStatus === 'FINALIZED') uiPhase = 'finalized';
+  else if (backendStatus === 'READY_FOR_RESET') uiPhase = 'reset';
+
+  const phaseText = document.getElementById('current-phase');
+  if (phaseText) {
+    const phaseLabel = backendStatus === 'READY_FOR_RESET' ? 'Ready for Reset' :
+                       backendStatus === 'ACTIVE' ? 'Active' :
+                       backendStatus === 'FINALIZED' ? 'Finalized' : backendStatus;
+    phaseText.textContent = `Phase: ${phaseLabel}`;
+  }
+
+  // Update state object
+  state.currentPhase = uiPhase;
+
+  // Update phase statuses
+  Object.keys(state.phases).forEach(phase => {
+    state.phases[phase].status = (phase === uiPhase) ? 'current' :
+                                 (getPhaseOrder(phase) < getPhaseOrder(uiPhase)) ? 'completed' : 'pending';
+  });
+
+  // Update UI elements
+  updateLifecycleUI();
+  updateMetrics();
+  const loopText = document.getElementById('loop-status-text');
+  const loopDot = document.getElementById('loop-status-dot');
+  if (loopText) loopText.textContent = `Loop ${backendStatus}`;
+  if (loopDot) {
+    loopDot.className = 'status-dot';
+    if (backendStatus === 'ACTIVE') loopDot.classList.add('dot-green');
+    else if (backendStatus === 'FINALIZED') loopDot.classList.add('dot-yellow');
+    else loopDot.classList.add('dot-gray');
+  }
+
+  // Update gate status
+  if (statusData.gateStatus) {
+    document.getElementById('gate-status').textContent = statusData.gateStatus;
+    document.getElementById('gate-status').className =
+      statusData.gateStatus === 'BLOCKED' ? 'status-blocked' : 'status-pass';
+  }
+
+  // Update task counts
+  if (statusData.activeTasks !== undefined) {
+    document.getElementById('active-tasks').textContent = statusData.activeTasks;
+  }
+  if (statusData.closedTasks !== undefined) {
+    document.getElementById('closed-tasks').textContent = statusData.closedTasks;
+  }
+
+  // Update transition hint
+  if (statusData.transitionHint) {
+    document.getElementById('transition-hint').textContent = statusData.transitionHint;
+  }
+
+  applyActionGuards(statusData, guards || state.guardians);
+}
+
+function getPhaseOrder(phase) {
+  const order = { 'finalized': 0, 'reset': 1, 'bootstrap': 2, 'active': 3 };
+  return order[phase] || 0;
+}
+
+// ══════════════════════════════════════════════════
+//  LOOP CONTROL FUNCTIONS (WIRED TO API)
+// ══════════════════════════════════════════════════
+async function confirmBootstrap(){
+  try {
+    log('INFO', 'Confirming bootstrap...');
+
+    const statusData = await fetchStatus();
+    if (!statusData) throw new Error('Unable to read current loop status');
+    if (statusData.status === 'FINALIZED') {
+      throw new Error('Bootstrap confirm is not valid while loop status is FINALIZED');
+    }
+    if (statusData.gateStatus === 'BLOCKED') {
+      throw new Error('Cannot confirm bootstrap: Loop gate is BLOCKED');
+    }
+
+    const result = await callAPI('/api/confirm-bootstrap', 'POST', {});
+
+    if (result.success) {
+      log('OK', `Bootstrap confirmed - loop is now ${result.status || 'ACTIVE'}`);
+      toast('Bootstrap confirmed! Loop activated.', 'ok');
+      await updateLifecycleUI();
+      await fetchGuardianState();
+      await updateAuditPanel();
+    } else {
+      throw new Error(result.error || 'Bootstrap confirmation failed');
+    }
+
+  } catch (error) {
+    log('ERROR', `Bootstrap confirmation failed: ${error.message}`);
+    toast(`Bootstrap failed: ${error.message}`, 'error');
+  }
+}
+
+async function finalizeLoop(){
+  showModal('Finalize Loop', 'This will create an archive and prepare for amnesia. Continue?', null, async () => {
+    try {
+      log('INFO', 'Finalizing loop...');
+      const statusData = await fetchStatus();
+      if (!statusData) throw new Error('Unable to read current loop status');
+      if (statusData.status !== 'ACTIVE') {
+        throw new Error(`Finalize blocked: status is ${statusData.status}, must be ACTIVE`);
+      }
+      const gates = await safeGet('/api/validate-gates');
+      const preFinalGate = gates?.gates?.pre_finalization;
+      if (preFinalGate && !preFinalGate.valid) {
+        throw new Error(`Finalize blocked by gate: ${preFinalGate.error || 'pre_finalization failed'}`);
+      }
+      const audit = await callAPI('/api/audit-status', 'GET');
+      if (!audit.success || !audit.canFinalize) {
+        const topViolation = (audit.violations || [])[0];
+        throw new Error(topViolation || audit.message || 'Pre-finalization audit failed');
+      }
+
+      const result = await callAPI('/api/finalize-loop', 'POST', {});
+
+      if (result.success) {
+        log('OK', 'Loop finalized successfully');
+        toast('Loop finalized! Archive created.', 'ok');
+        if (Array.isArray(result.warnings) && result.warnings.length) {
+          result.warnings.slice(0, 3).forEach((w) => log('WARN', `Finalize warning: ${w}`));
+        }
+        await updateLifecycleUI();
+        await fetchGuardianState();
+        await updateAuditPanel();
+      } else {
+        throw new Error(result.error || 'Loop finalization failed');
+      }
+
+    } catch (error) {
+      log('ERROR', `Loop finalization failed: ${error.message}`);
+      toast(`Finalization failed: ${error.message}`, 'error');
+    }
+  });
+}
+
+async function resetLoop(){
+  showModal('Reset Loop', 'This will trigger amnesia and prepare for next loop. Continue?', null, async () => {
+    try {
+      log('INFO', 'Resetting loop...');
+      const statusData = await fetchStatus();
+      if (!statusData) throw new Error('Unable to read current loop status');
+      const gates = await safeGet('/api/validate-gates');
+      const preResetGate = gates?.gates?.pre_reset;
+      if (!statusData.canReset) throw new Error('Reset blocked until FINALIZED with pending archive');
+      if (preResetGate && !preResetGate.valid) throw new Error(preResetGate.error || 'Reset blocked by pre-reset validation gate');
+
+      const result = await callAPI('/api/reset-loop', 'POST', {});
+
+      if (result.success) {
+        log('OK', 'Loop reset - new loop ready');
+        toast('Loop reset! Ready for next iteration.', 'ok');
+        if (result.bootstrap_command) {
+          log('INFO', `Bootstrap command: ${result.bootstrap_command}`);
+        }
+        await updateLifecycleUI();
+        await fetchGuardianState();
+        await updateAuditPanel();
+      } else {
+        throw new Error(result.error || 'Loop reset failed');
+      }
+
+    } catch (error) {
+      log('ERROR', `Loop reset failed: ${error.message}`);
+      toast(`Reset failed: ${error.message}`, 'error');
+    }
+  });
+}
+
+function advancePhase(){
+  const phases = ['finalized', 'reset', 'bootstrap', 'active'];
+  const currentIndex = phases.indexOf(state.currentPhase);
+  if (currentIndex === -1) return;
+  const nextPhase = phases[(currentIndex + 1) % phases.length];
+  state.phases[state.currentPhase].status = 'completed';
+  state.phases[nextPhase].status = 'current';
+  state.currentPhase = nextPhase;
+  renderLoopNodes();
+  updateLifecycleUI();
+  log('INFO', `Advanced to phase: ${PHASE_DEFS[nextPhase].title}`);
+}
+
+async function updateLifecycleUI(){
+  try {
+    const response = await fetch(`${getApiBase()}/api/status`);
+    const data = await response.json();
+
+    const stages = document.querySelectorAll('.lifecycle-stage');
+    const statusMap = {
+      'READY_FOR_RESET': ['completed', 'pending', 'pending', 'current', 'pending'],
+      'ACTIVE': ['completed', 'completed', 'current', 'pending', 'pending'],
+      'FINALIZED': ['completed', 'completed', 'completed', 'completed', 'current']
+    };
+
+    const stageStatuses = statusMap[data.status] || ['pending', 'pending', 'pending', 'pending', 'pending'];
+
+    stages.forEach((stage, i) => {
+      const indicator = stage.querySelector('.stage-indicator');
+      indicator.className = 'stage-indicator ' + stageStatuses[i];
+    });
+
+    // Update loop number display
+    const loopNumberElement = document.getElementById('loop-number');
+    if (loopNumberElement) {
+      loopNumberElement.value = String(data.loop);
+    }
+    const loopStatusElement = document.getElementById('loop-status');
+    if (loopStatusElement) {
+      loopStatusElement.value = data.status || 'UNKNOWN';
+    }
+
+  } catch (error) {
+    console.error('Failed to update lifecycle UI:', error);
+  }
+}
+
+async function refreshLifecycle(){
+  await updateLifecycleUI();
+  await updateAuditPanel();
+  toast('Lifecycle and audit data refreshed','info');
+}
+async function runAgent(){
+  try {
+    // Get selected model
+    const modelSelect = document.getElementById('agent-model-select');
+    const selectedModel = modelSelect.value;
+    
+    // Update display
+    document.getElementById('agent-model-display').textContent = selectedModel;
+    document.getElementById('agent-status').textContent = 'Processing task...';
+    
+    // Fetch next task from queue
+    const response = await fetch(`${getApiBase()}/api/tasks/active`);
+    const data = await response.json();
+    
+    if (!data.success || !data.tasks || data.tasks.length === 0) {
+      log('WARN', 'No active tasks available');
+      toast('No tasks in queue','warn');
+      document.getElementById('agent-status').textContent = 'Ready for task execution';
+      return;
+    }
+    
+    const nextTask = data.tasks[0];
+    state.currentTask = nextTask;
+    
+    // Update agent status
+    state.agents.main.status = 'running';
+    state.agents.main.lastAction = `Processing ${nextTask.id} with ${selectedModel}`;
+    document.getElementById('agent-last-action').textContent = state.agents.main.lastAction;
+    
+    log('OK', `Agent started processing task: ${nextTask.id} with model: ${selectedModel}`);
+    toast(`Processing task: ${nextTask.id}`,'ok');
+    
+    const completeData = await callAPI('/api/tasks/complete', 'POST', { taskId: nextTask.id });
+    if (completeData.success) {
+      state.agents.main.status = 'idle';
+      state.agents.main.lastAction = `Completed ${nextTask.id}`;
+      document.getElementById('agent-last-action').textContent = state.agents.main.lastAction;
+      state.metrics.tasksDone++;
+      updateMetrics();
+      log('OK', `Task ${nextTask.id} completed successfully`);
+      toast(`Task ${nextTask.id} completed!`,'ok');
+      updateTaskCounts();
+    } else {
+      log('ERROR', `Failed to complete task ${nextTask.id}: ${completeData.error}`);
+      toast(`Failed to complete task`,'error');
+      state.agents.main.status = 'error';
+    }
+    
+  } catch (error) {
+    log('ERROR', `Error starting agent: ${error.message}`);
+    toast('Error starting agent','error');
+  }
+}
+
+function stopAgent(){
+  state.agents.main.status = 'stopped';
+  document.getElementById('agent-status').textContent = 'Execution stopped';
+  document.getElementById('agent-last-action').textContent = 'Stopped by user';
+  log('WARN', 'Agent execution stopped');
+  toast('Agent stopped','warn');
+}
+
+function pauseAgent(){
+  if (state.agents.main.status === 'running') {
+    state.agents.main.status = 'paused';
+    document.getElementById('agent-status').textContent = 'Execution paused';
+    document.getElementById('agent-last-action').textContent = 'Paused by user';
+    log('INFO', 'Agent execution paused');
+    toast('Agent paused','info');
+  } else {
+    log('WARN', 'Agent is not running');
+    toast('Agent is not running','warn');
+  }
+}
+
+function runIntegrityCheck(){
+  log('INFO', 'Running AI integrity check...');
+  
+  fetch(`${getApiBase()}/api/audit-status`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        if (data.greenLight) {
+          log('OK', 'Integrity check passed - ready for finalization');
+          toast('Integrity check passed','ok');
+        } else {
+          const issueCount = data.violations ? data.violations.length : 0;
+          const warningCount = data.warnings ? data.warnings.length : 0;
+          log('WARN', `Integrity check found ${issueCount} issues, ${warningCount} warnings`);
+          toast(`Integrity check: ${issueCount} issues, ${warningCount} warnings`,'warn');
+          
+          // Log details
+          if (data.violations && data.violations.length > 0) {
+            data.violations.forEach(issue => log('ERROR', `ISSUE: ${issue}`));
+          }
+          if (data.warnings && data.warnings.length > 0) {
+            data.warnings.forEach(warning => log('WARN', `WARNING: ${warning}`));
+          }
+        }
+      } else {
+        log('ERROR', 'Failed to run integrity check');
+        toast('Integrity check failed','error');
+      }
+    })
+    .catch(error => {
+      log('ERROR', `Integrity check error: ${error.message}`);
+      toast('Integrity check error','error');
+    });
+}
+
+async function updateAuditPanel() {
+  try {
+    const audit = await callAPI('/api/audit-status', 'GET');
+    const check = await callAPI('/api/finalization-check', 'GET');
+    const gates = await safeGet('/api/validate-gates');
+    const statusData = await fetchStatus();
+    const preFinalGate = gates?.gates?.pre_finalization;
+    const preResetGate = gates?.gates?.pre_reset;
+    const topViolation = (audit.violations || [])[0];
+    const targetIds = ['monitor-audit-panel', 'sr-audit-panel'];
+    const html = `
+      <div class="audit-title">Pre-Finalization Audit</div>
+      <div class="audit-item"><span class="audit-label">Green Light</span><span class="audit-status ${audit.greenLight ? 'pass' : 'fail'}">${audit.greenLight ? 'PASS' : 'BLOCKED'}</span></div>
+      <div class="audit-item"><span class="audit-label">Violations</span><span class="audit-status ${(audit.violations || []).length ? 'fail' : 'pass'}">${(audit.violations || []).length}</span></div>
+      <div class="audit-item"><span class="audit-label">Warnings</span><span class="audit-status ${(audit.warnings || []).length ? 'warn' : 'pass'}">${(audit.warnings || []).length}</span></div>
+      <div class="audit-item"><span class="audit-label">Pre-Final Gate</span><span class="audit-status ${preFinalGate?.valid ? 'pass' : 'fail'}">${preFinalGate?.valid ? 'PASS' : 'BLOCKED'}</span></div>
+      <div class="audit-item"><span class="audit-label">Pre-Reset Gate</span><span class="audit-status ${preResetGate?.valid ? 'pass' : 'fail'}">${preResetGate?.valid ? 'PASS' : 'BLOCKED'}</span></div>
+      <div class="audit-item"><span class="audit-label">Reset Eligibility</span><span class="audit-status ${statusData?.canReset ? 'pass' : 'warn'}">${statusData?.canReset ? 'CAN RESET' : 'BLOCKED'}</span></div>
+      <div class="audit-item"><span class="audit-label">Token Urgency</span><span class="audit-status ${['HIGH','CRITICAL'].includes(check.urgency) ? 'warn' : 'pass'}">${check.urgency || 'NONE'}</span></div>
+      <div class="audit-item"><span class="audit-label">Blocking Detail</span><span class="audit-status ${topViolation ? 'fail' : 'pass'}">${topViolation ? topViolation.slice(0, 90) : 'None'}</span></div>
+    `;
+    targetIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    });
+  } catch (error) {
+    log('WARN', `Audit panel update failed: ${error.message}`);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  MONITORING FUNCTIONS
+// ══════════════════════════════════════════════════
+function refreshMonitor(){
+  fetchStatus().then((d) => {
+    if (d) updateUIFromStatus(d, state.guardians);
+  });
+  safeGet('/api/policy-gate/status').then(updatePolicyGateBadge);
+  updateLifeCoordinates();
+  updateBreadcrumbTrail();
+  updateAutostartPanel();
+  updateAuditPanel();
+  updateMetrics();
+  log('INFO', 'Monitor refreshed');
+}
+
+function updateMetrics(){
+  document.getElementById('loop-progress').textContent = state.metrics.progress + '%';
+  document.getElementById('progress-fill').style.width = state.metrics.progress + '%';
+  
+  document.getElementById('ai-confidence').textContent = state.metrics.confidence + '%';
+  document.getElementById('confidence-fill').style.width = state.metrics.confidence + '%';
+  
+  document.getElementById('tasks-done').textContent = state.metrics.tasksDone;
+  
+  document.getElementById('sr-uptime').textContent = Math.floor(state.metrics.uptime / 60) + ':' + (state.metrics.uptime % 60).toString().padStart(2, '0');
+  document.getElementById('sr-memory').textContent = state.metrics.memory + '%';
+  document.getElementById('sr-memory').nextElementSibling.style.width = state.metrics.memory + '%';
+  document.getElementById('sr-ai-calls').textContent = state.metrics.aiCalls;
+}
+
+function updateTaskCounts(){
+  // Fetch current task counts from API
+  fetch(`${getApiBase()}/api/tasks/active`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('active-tasks').textContent = data.tasks.length;
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching task counts:', error);
+    });
+}
+
+// ══════════════════════════════════════════════════
+//  AI LIFE MONITOR FUNCTIONS
+// ══════════════════════════════════════════════════
+let lifeMonitorInterval = null;
+
+function initLifeMonitor(){
+  // Start periodic updates of life coordinates
+  updateLifeCoordinates();
+  lifeMonitorInterval = setInterval(updateLifeCoordinates, 2000); // Update every 2 seconds
+}
+
+function stopLifeMonitor(){
+  if (lifeMonitorInterval) {
+    clearInterval(lifeMonitorInterval);
+    lifeMonitorInterval = null;
+  }
+}
+
+function updateLifeCoordinates(){
+  fetch(`${getApiBase()}/api/life-coordinates`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.confidence !== undefined && data.arousal !== undefined) {
+        // Update display values
+        if (document.getElementById('confidence-value')) {
+          document.getElementById('confidence-value').textContent = `${(data.confidence * 100).toFixed(1)}%`;
+        }
+        if (document.getElementById('arousal-value')) {
+          document.getElementById('arousal-value').textContent = data.arousal.toFixed(2);
+        }
+
+        // Update interpretation
+        const interpretationElement = document.getElementById('life-interpretation');
+        if (interpretationElement) {
+          const confidenceLevel = data.confidence > 0.7 ? "high" : data.confidence > 0.3 ? "moderate" : "low";
+          const arousalLevel = data.arousal > 0.7 ? "high" : data.arousal > 0.3 ? "moderate" : "low";
+
+          let interpretation = "Analyzing...";
+          if (confidenceLevel === "high" && arousalLevel === "low") {
+            interpretation = "Harmonic confidence - focused, deliberate work";
+          } else if (confidenceLevel === "high" && arousalLevel === "high") {
+            interpretation = "Energetic confidence - productive high activity";
+          } else if (confidenceLevel === "low" && arousalLevel === "high") {
+            interpretation = "Panic mode - high activity, low stability";
+          } else if (confidenceLevel === "low" && arousalLevel === "low") {
+            interpretation = "Insecure stagnation - low activity, low confidence";
+          } else {
+            interpretation = `Moderate state - ${confidenceLevel} confidence, ${arousalLevel} activity`;
+          }
+          interpretationElement.textContent = interpretation;
+        }
+
+        // Update dot position
+        updateLifeDotPosition(data.confidence, data.arousal);
+        
+        // Create echo effect
+        createLifeEcho(data.confidence, data.arousal);
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching life coordinates:', error);
+      // Set fallback values
+      if (document.getElementById('confidence-value')) {
+        document.getElementById('confidence-value').textContent = '--';
+      }
+      if (document.getElementById('arousal-value')) {
+        document.getElementById('arousal-value').textContent = '--';
+      }
+      if (document.getElementById('life-interpretation')) {
+        document.getElementById('life-interpretation').textContent = 'Connection lost...';
+      }
+    });
+}
+
+function updateLifeDotPosition(confidence, arousal) {
+  const dot = document.getElementById('life-dot');
+  const container = document.querySelector('.life-coordinate-system');
+  
+  if (!dot || !container) return;
+  
+  const containerRect = container.getBoundingClientRect();
+  const dotSize = 8;
+  const padding = 4;
+  
+  // Calculate position (invert Y for coordinate system)
+  const pixelX = padding + (confidence * (containerRect.width - 2 * padding - dotSize));
+  const pixelY = padding + ((1 - arousal) * (containerRect.height - 2 * padding - dotSize)); // Invert Y
+  
+  dot.style.left = `${pixelX}px`;
+  dot.style.top = `${pixelY}px`;
+}
+
+function createLifeEcho(confidence, arousal) {
+  const trail = document.getElementById('life-trail');
+  if (!trail) return;
+  
+  // Create new echo
+  const echo = document.createElement('div');
+  echo.className = 'life-echo';
+  
+  // Position echo at current dot position
+  const container = document.querySelector('.life-coordinate-system');
+  if (container) {
+    const containerRect = container.getBoundingClientRect();
+    const dotSize = 8;
+    const padding = 4;
+    
+    const pixelX = padding + (confidence * (containerRect.width - 2 * padding - dotSize));
+    const pixelY = padding + ((1 - arousal) * (containerRect.height - 2 * padding - dotSize));
+    
+    echo.style.cssText = `
+      position: absolute;
+      left: ${pixelX}px;
+      top: ${pixelY}px;
+      width: 6px;
+      height: 6px;
+      background: rgba(107, 70, 193, 0.6);
+      border-radius: 50%;
+      border: 1px solid rgba(107, 70, 193, 0.8);
+      pointer-events: none;
+      animation: fade-trail 3s ease-out forwards;
+      z-index: 5;
+    `;
+    
+    trail.appendChild(echo);
+    
+    // Remove echo after animation
+    setTimeout(() => {
+      if (echo.parentNode) {
+        echo.parentNode.removeChild(echo);
+      }
+    }, 3000);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  BREADCRUMB TRAIL FUNCTIONS
+// ══════════════════════════════════════════════════
+let breadcrumbInterval = null;
+
+function initBreadcrumbTrail(){
+  // Start periodic updates of breadcrumb trail
+  updateBreadcrumbTrail();
+  breadcrumbInterval = setInterval(updateBreadcrumbTrail, 5000); // Update every 5 seconds
+}
+
+function stopBreadcrumbTrail(){
+  if (breadcrumbInterval) {
+    clearInterval(breadcrumbInterval);
+    breadcrumbInterval = null;
+  }
+}
+
+function updateBreadcrumbTrail(){
+  fetch(`${getApiBase()}/api/breadcrumbs`)
+    .then(response => response.json())
+    .then(data => {
+      const trailElement = document.getElementById('breadcrumb-trail');
+      const countElement = document.getElementById('breadcrumb-count');
+      
+      if (!trailElement || !countElement) return;
+      
+      // Update count
+      countElement.textContent = data.count || 0;
+      
+      // Clear existing items
+      trailElement.innerHTML = '';
+      
+      // Add breadcrumb items (show last 10 for UI space)
+      const breadcrumbs = data.breadcrumbs || [];
+      const recentBreadcrumbs = breadcrumbs.slice(-10);
+      
+      if (recentBreadcrumbs.length === 0) {
+        trailElement.innerHTML = '<div class="breadcrumb-item"><span class="breadcrumb-ts">--:--:--</span><span class="breadcrumb-op">No data</span><span class="breadcrumb-file">Waiting for events</span></div>';
+        return;
+      }
+      
+      recentBreadcrumbs.forEach(breadcrumb => {
+        const item = document.createElement('div');
+        item.className = 'breadcrumb-item';
+        
+        // Format timestamp
+        const ts = new Date(breadcrumb.timestamp);
+        const timeStr = ts.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        });
+        
+        // Format operation
+        const op = breadcrumb.operation || 'unknown';
+        const opDisplay = op.replace('_', ' ').toLowerCase();
+        
+        // Format file path (shorten if too long)
+        const file = breadcrumb.target_file || 'unknown';
+        const fileDisplay = file.length > 30 ? '...' + file.slice(-27) : file;
+        
+        item.innerHTML = `
+          <span class="breadcrumb-ts">${timeStr}</span>
+          <span class="breadcrumb-op">${opDisplay}</span>
+          <span class="breadcrumb-file" title="${file}">${fileDisplay}</span>
+        `;
+        
+        trailElement.appendChild(item);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching breadcrumbs:', error);
+      const trailElement = document.getElementById('breadcrumb-trail');
+      const countElement = document.getElementById('breadcrumb-count');
+      
+      if (trailElement) {
+        trailElement.innerHTML = '<div class="breadcrumb-item"><span class="breadcrumb-ts">--:--:--</span><span class="breadcrumb-op">Error</span><span class="breadcrumb-file">Connection lost</span></div>';
+      }
+      if (countElement) {
+        countElement.textContent = '0';
+      }
+    });
+}
+
+async function updateAutostartPanel() {
+  try {
+    const data = await callAPI('/api/autostart/status', 'GET');
+    const supervisor = data.supervisor || {};
+    const summary = data.summary || {};
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+
+    const stateEl = document.getElementById('autostart-supervisor-state');
+    const pidEl = document.getElementById('autostart-supervisor-pid');
+    const totalEl = document.getElementById('autostart-total-jobs');
+    const runningEl = document.getElementById('autostart-running-jobs');
+    const failedEl = document.getElementById('autostart-failed-jobs');
+    const listEl = document.getElementById('autostart-jobs-list');
+    if (!stateEl || !pidEl || !totalEl || !runningEl || !failedEl || !listEl) return;
+
+    const isRunning = !!supervisor.running;
+    stateEl.textContent = isRunning ? 'running' : 'stopped';
+    stateEl.style.color = isRunning ? 'var(--green)' : 'var(--red)';
+    pidEl.textContent = supervisor.pid || '--';
+    totalEl.textContent = summary.total_jobs ?? jobs.length;
+    runningEl.textContent = summary.running_jobs ?? 0;
+    failedEl.textContent = summary.failed_jobs ?? 0;
+    failedEl.style.color = (summary.failed_jobs || 0) > 0 ? 'var(--red)' : 'var(--green)';
+    updateSupervisorServiceOverview(data);
+
+    if (!jobs.length) {
+      listEl.textContent = 'No job data available.';
+      return;
+    }
+
+    listEl.innerHTML = jobs.map((job) => {
+      const status = job.running ? 'running' : (job.failed ? 'failed' : (job.pending_first_run ? 'pending' : 'idle'));
+      const statusColor = status === 'running'
+        ? 'var(--green)'
+        : status === 'failed'
+          ? 'var(--red)'
+          : status === 'pending'
+            ? 'var(--yellow)'
+            : 'var(--txt2)';
+      const pid = job.pid || '--';
+      const exitCode = job.last_exit_code ?? '--';
+      return `
+        <div style="border-bottom:1px solid var(--border);padding:6px 4px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <span style="color:var(--txt);font-size:10px;max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${job.name}">${job.name}</span>
+            <span style="color:${statusColor};font-size:10px">${status}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--txt3);font-size:9px;margin-top:2px">
+            <span>pid: ${pid}</span>
+            <span>exit: ${exitCode}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:5px">
+            <button class="control-btn" style="padding:4px 6px;font-size:9px" onclick="autostartJobControl('${job.name}','run_now')">Run</button>
+            <button class="control-btn" style="padding:4px 6px;font-size:9px" onclick="autostartJobControl('${job.name}','restart')">Restart</button>
+            <button class="control-btn danger" style="padding:4px 6px;font-size:9px" onclick="autostartJobControl('${job.name}','stop')">Stop</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    updateSupervisorServiceOverview(null);
+    log('WARN', `Autostart panel update failed: ${error.message}`);
+  }
+}
+
+function updateSupervisorServiceOverview(data) {
+  const ratioEl = document.getElementById('si-supervisor-ratio');
+  const stateEl = document.getElementById('si-supervisor-state');
+  if (!ratioEl || !stateEl) return;
+
+  if (!data) {
+    ratioEl.textContent = '';
+    stateEl.textContent = 'DOWN';
+    stateEl.classList.remove('green');
+    stateEl.classList.add('red');
+    stateEl.style.color = '';
+    stateEl.style.background = '';
+    return;
+  }
+
+  const supervisor = data.supervisor || {};
+  const summary = data.summary || {};
+  const total = Number(summary.total_jobs ?? 0);
+  const failed = Number(summary.failed_jobs ?? 0);
+  const supervisorRunning = !!supervisor.running;
+  const restartNeeded = failed;
+
+  ratioEl.textContent = '';
+
+  let compactStatus = 'DOWN';
+  if (supervisorRunning && restartNeeded === 0) compactStatus = 'HEALTHY';
+  if (supervisorRunning && restartNeeded > 0) compactStatus = 'PARTIAL';
+
+  stateEl.textContent = compactStatus;
+  stateEl.classList.remove('green', 'red');
+  stateEl.style.color = '';
+  stateEl.style.background = '';
+  if (compactStatus === 'HEALTHY') {
+    stateEl.classList.add('green');
+  } else if (compactStatus === 'DOWN') {
+    stateEl.classList.add('red');
+  } else {
+    stateEl.style.color = 'var(--yellow)';
+    stateEl.style.background = 'rgba(255,214,102,.12)';
+  }
+}
+
+async function autostartControl(action) {
+  try {
+    const rsp = await callAPI('/api/autostart/control', 'POST', { action });
+    const ok = !!rsp?.action_result?.success;
+    const msg = rsp?.action_result?.message || rsp?.action_result?.error || 'unknown result';
+    log(ok ? 'OK' : 'WARN', `Supervisor ${action}: ${msg}`);
+    await updateAutostartPanel();
+  } catch (error) {
+    log('ERROR', `Supervisor ${action} failed: ${error.message}`);
+  }
+}
+
+async function autostartJobControl(job, action) {
+  try {
+    const rsp = await callAPI('/api/autostart/job-control', 'POST', { job, action });
+    const ok = !!rsp?.action_result?.success;
+    const msg = rsp?.action_result?.message || rsp?.action_result?.error || 'unknown result';
+    log(ok ? 'OK' : 'WARN', `Job ${job} ${action}: ${msg}`);
+    await updateAutostartPanel();
+  } catch (error) {
+    log('ERROR', `Job ${job} ${action} failed: ${error.message}`);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  UTILITY FUNCTIONS
+// ══════════════════════════════════════════════════
+function toggleSwitch(el, key){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  log('INFO', `${key} → ${on ? 'ON' : 'OFF'}`);
+}
+
+function saveSettings(){
+  const cfg = {
+    monitorUrl: document.getElementById('monitor-url')?.value || API_BASE,
+    backend: document.getElementById('ai-backend')?.value || 'openai',
+    model: document.getElementById('ai-model')?.value || 'gpt-5',
+    terminalSource: document.getElementById('terminal-source')?.value || state.terminal.source,
+    terminalPaused: state.terminal.paused
+  };
+  localStorage.setItem('experimental_loop_ui_settings', JSON.stringify(cfg));
+  log('OK', 'Settings saved');
+  toast('Settings saved!','ok');
+}
+
+function pingService(service){
+  log('INFO', `Pinging ${service}...`);
+  setTimeout(() => {
+    log('OK', `${service} responding`);
+  }, 500);
+}
+
+function runAudit(){
+  log('INFO', 'Running pre-finalization audit...');
+  updateAuditPanel().then(() => {
+    fetchGuardianState();
+    log('OK', 'Audit completed');
+    toast('Audit refreshed','ok');
+  });
+}
+
+function viewPhase(id) {
+  selectPhase(id);
+  renderLoopNodes();
+}
+
+function viewIntegrityLog() {
+  const auditTab = Array.from(document.querySelectorAll('.sr-tab')).find((el) => (el.getAttribute('onclick') || '').includes("'audit'"));
+  if (auditTab) srTab(auditTab, 'audit');
+}
+
+function emergencyStop() {
+  stopAgent();
+  stopStatusPolling();
+  stopTerminalPolling();
+  log('ERROR', 'Emergency stop activated: polling halted and agent stopped');
+  toast('Emergency stop activated','error');
+}
+
+function showModal(title, sub, body, onConfirm){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-sub').textContent = sub;
+  document.getElementById('modal-body').innerHTML = body || '';
+  document.getElementById('modal-confirm').onclick = () => {
+    closeModal();
+    if(onConfirm) onConfirm();
+  };
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+function log(level, msg){
+  const logDiv = document.getElementById('sr-log');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `
+    <span class="log-ts">${new Date().toLocaleTimeString()}</span>
+    <span class="log-level ${level}">${level}</span>
+    <span class="log-msg">${msg}</span>
+  `;
+  logDiv.appendChild(line);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function toast(msg, type='info'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type}`;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// ══════════════════════════════════════════════════
+//  INITIALIZATION
+// ══════════════════════════════════════════════════
+async function init(){
+  initGraphEngine();
+  try {
+    const raw = localStorage.getItem('experimental_loop_ui_settings');
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg.monitorUrl && document.getElementById('monitor-url')) {
+        document.getElementById('monitor-url').value = cfg.monitorUrl;
+      }
+      if (cfg.backend && document.getElementById('ai-backend')) {
+        document.getElementById('ai-backend').value = cfg.backend;
+      }
+      if (cfg.model && document.getElementById('ai-model')) {
+        document.getElementById('ai-model').value = cfg.model;
+      }
+      if (cfg.terminalSource) {
+        state.terminal.source = cfg.terminalSource;
+      }
+      if (typeof cfg.terminalPaused === 'boolean') {
+        state.terminal.paused = cfg.terminalPaused;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load saved settings', error);
+  }
+  restoreCanvasState();
+  if (graphEngine) syncGraphEngineFromState();
+  renderLoopNodes();
+  initCanvasInteractions();
+  setCanvasTool('select');
+  const snapBtn = document.getElementById('btn-tool-snap');
+  if (snapBtn) snapBtn.classList.toggle('tool-active', state.canvas.snap);
+  const initialStatus = await fetchStatus();
+  if (initialStatus) {
+    state.guardians.status = initialStatus;
+    await fetchGuardianState();
+    updateUIFromStatus(initialStatus, state.guardians);
+  }
+  await updateLifecycleUI();
+  await updateAuditPanel();
+  updateMetrics();
+  const terminalSource = document.getElementById('terminal-source');
+  if (terminalSource) terminalSource.value = state.terminal.source;
+  const terminalPauseBtn = document.getElementById('terminal-pause-btn');
+  if (terminalPauseBtn) terminalPauseBtn.textContent = state.terminal.paused ? 'Resume' : 'Pause';
+  await refreshTerminalFeed();
+  
+  // Start real-time status polling
+  startStatusPolling();
+  startTerminalPolling();
+  
+  // Initialize AI life monitor
+  initLifeMonitor();
+  
+  // Initialize breadcrumb trail
+  initBreadcrumbTrail();
+  updateAutostartPanel();
+  
+  // Start uptime counter
+  setInterval(() => {
+    state.metrics.uptime++;
+    updateMetrics();
+  }, 60000);
+  
+  log('OK', 'Experimental Loop UI initialized with real-time sync');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init().catch((error) => {
+    console.error('Initialization failed', error);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIOM · Runtime Chain Live Monitor</title>
+<style>
+:root{
+  --bg:#050913;--bg1:#0a1020;--bg2:#10172d;--bg3:#18213d;
+  --line:#1d2949;--line2:#2b3d6c;
+  --text:#cad6ee;--muted:#7384aa;--faint:#44506f;
+  --cyan:#00d3ff;--green:#0ff0a0;--amber:#ffb340;--red:#ff4a66;--orange:#ff8c4d;--violet:#8b6dff;
+}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:Bahnschrift,"Segoe UI Variable Text","Trebuchet MS",sans-serif;background:radial-gradient(circle at top,#0b1327 0,#050913 55%);color:var(--text)}
+.app{height:100%;display:grid;grid-template-rows:64px 98px 1fr}
+.header{display:flex;align-items:center;gap:18px;padding:12px 20px;background:rgba(8,14,29,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.brand{font-size:28px;letter-spacing:3px;font-weight:700;color:var(--cyan);text-transform:uppercase}
+.brand small{font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:400;margin-left:10px}
+.status{display:flex;gap:10px;margin-left:auto;align-items:center;font-size:11px;color:var(--muted)}
+.pill{padding:6px 10px;border:1px solid var(--line2);border-radius:999px;background:rgba(16,23,45,.8);white-space:nowrap}
+.pill strong{color:var(--text)}
+.toolbar{display:grid;grid-template-columns:380px 380px 320px 1fr;gap:12px;padding:12px 20px;background:rgba(10,16,32,.88);border-bottom:1px solid var(--line)}
+.panelLite{padding:12px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(16,23,45,.92),rgba(11,17,33,.94));border-radius:12px}
+.panelLite h3{margin:0 0 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.btnRow,.fieldRow{display:flex;gap:8px;align-items:center}
+button,select,input{border:1px solid var(--line2);background:#0d1529;color:var(--text);border-radius:8px;font:inherit}
+button{padding:8px 12px;cursor:pointer}
+button:hover{border-color:var(--cyan);color:var(--cyan)}
+button.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,211,255,.08)}
+select,input{padding:8px 10px;width:100%}
+.sub{font-size:10px;color:var(--faint);margin-top:6px;line-height:1.35}
+.statsGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.stat{padding:12px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,25,49,.9),rgba(10,14,28,.9));border-radius:12px}
+.stat .k{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--faint)}
+.stat .v{font-size:28px;font-weight:700;line-height:1.05;margin-top:5px}
+.stat .s{font-size:11px;color:var(--muted);margin-top:4px}
+.main{display:grid;grid-template-columns:280px 1fr 380px;gap:0;min-height:0}
+.sidebar,.detail{background:rgba(8,13,26,.96);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.detail{border-right:none;border-left:1px solid var(--line)}
+.section{padding:14px;border-bottom:1px solid var(--line)}
+.section h4{margin:0 0 10px;font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.scroll{overflow:auto;min-height:0}
+.sampleList,.configList{padding:8px}
+.sampleItem,.configItem{padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer;margin-bottom:6px;background:rgba(15,22,41,.65)}
+.sampleItem:hover,.configItem:hover,.sampleItem.active,.configItem.active{border-color:var(--cyan);background:rgba(0,211,255,.08)}
+.sampleItem .top,.configItem .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.sampleItem .name,.configItem .name{font-size:13px;font-weight:600}
+.sampleItem .meta,.configItem .meta{font-size:10px;color:var(--muted);margin-top:4px}
+.miniBadge{padding:2px 7px;border-radius:999px;border:1px solid var(--line2);font-size:10px;color:var(--muted)}
+.center{display:flex;flex-direction:column;min-width:0;min-height:0}
+.centerHead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(9,14,29,.95)}
+.centerTitle{font-size:14px;color:var(--muted)}
+.centerTitle strong{color:var(--text)}
+.grow{flex:1}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.content{padding:16px;overflow:auto;min-height:0}
+.notice{padding:14px;border:1px dashed var(--line2);border-radius:12px;color:var(--muted);background:rgba(16,23,45,.45);line-height:1.45}
+.loopCards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.loopCard{padding:12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(14,22,42,.95),rgba(8,12,24,.95));cursor:pointer}
+.loopCard.active{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(0,211,255,.25) inset}
+.loopCard .loop{font-size:11px;letter-spacing:2px;color:var(--faint);text-transform:uppercase}
+.loopCard .value{font-size:24px;font-weight:700;margin-top:6px}
+.loopCard .meta{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35}
+.windowLane{display:grid;grid-template-columns:repeat(31,minmax(26px,1fr));gap:6px}
+.win{min-height:92px;border-radius:10px;padding:6px;border:1px solid rgba(255,255,255,.08);position:relative;cursor:pointer;overflow:hidden}
+.win:hover,.win.active{border-color:var(--cyan)}
+.win.gt{box-shadow:inset 0 0 0 2px rgba(139,109,255,.9)}
+.win .r{font-size:10px;color:#fff;font-weight:700}
+.win .slot{font-size:10px;color:rgba(255,255,255,.72);margin-top:2px}
+.win .score{font-size:15px;font-weight:700;margin-top:10px;color:#fff}
+.win .foot{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;font-size:9px;color:rgba(255,255,255,.82);background:linear-gradient(180deg,transparent,rgba(0,0,0,.3))}
+.detailBody{padding:14px;overflow:auto}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(15,22,41,.82)}
+.card .k{font-size:10px;color:var(--faint);letter-spacing:1.5px;text-transform:uppercase}
+.card .v{font-size:13px;font-weight:700;margin-top:4px;word-break:break-word}
+.progressBar{height:10px;border-radius:999px;background:#0d1427;border:1px solid var(--line);overflow:hidden;margin-top:10px}
+.progressBar span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green))}
+.pre{font-family:Consolas,monospace;font-size:11px;line-height:1.45;color:var(--muted);white-space:pre-wrap}
+.ok{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="brand">AXIOM <small>RUNTIME CHAIN LIVE MONITOR</small></div>
+    <div class="status">
+      <div class="pill">Mode: <strong id="modeLabel">idle</strong></div>
+      <div class="pill">Poll: <strong id="pollLabel">off</strong></div>
+      <div class="pill">Last read: <strong id="lastReadLabel">–</strong></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="panelLite">
+      <h3>Folder Picker</h3>
+      <div class="btnRow">
+        <button id="pickOutputBtn">Output wählen</button>
+        <button id="pickCacheBtn">Cache wählen</button>
+        <button id="pickDatasetBtn">Dataset wählen</button>
+      </div>
+      <div class="sub" id="folderInfo">Chromium/Edge nötig. Die UI liest lokale Ordner per File System Access API.</div>
+    </div>
+    <div class="panelLite">
+      <h3>Refresh</h3>
+      <div class="btnRow">
+        <button id="refreshBtn">Jetzt lesen</button>
+        <button id="pollBtn">Auto-Poll starten</button>
+      </div>
+      <div class="fieldRow" style="margin-top:8px">
+        <label class="sub" style="margin:0;min-width:70px">Intervall</label>
+        <select id="pollInterval">
+          <option value="3000">3s</option>
+          <option value="5000" selected>5s</option>
+          <option value="10000">10s</option>
+          <option value="20000">20s</option>
+        </select>
+      </div>
+      <div class="sub" id="refreshInfo">Noch kein Refresh.</div>
+    </div>
+    <div class="panelLite">
+      <h3>Filter</h3>
+      <div class="fieldRow">
+        <input id="sampleSearch" placeholder="Sample suchen">
+      </div>
+      <div class="fieldRow" style="margin-top:8px">
+        <select id="loopSelect"></select>
+        <select id="viewSelect">
+          <option value="final">Final loop rows</option>
+          <option value="runtime">Live runtime cache</option>
+        </select>
+      </div>
+      <div class="sub">Final-Ansicht nutzt `parameter_chain_loop_final_rows.csv`, Live-Ansicht nutzt laufende Cache-Manifeste.</div>
+    </div>
+    <div class="panelLite">
+      <h3>Progress</h3>
+      <div class="statsGrid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="stat"><div class="k">Samples</div><div class="v" id="miniSamples">–</div></div>
+        <div class="stat"><div class="k">Configs</div><div class="v" id="miniConfigs">–</div></div>
+        <div class="stat"><div class="k">Done</div><div class="v" id="miniDone">–</div></div>
+      </div>
+      <div class="progressBar"><span id="progressFill" style="width:0%"></span></div>
+      <div class="sub" id="progressText">Kein Lauf geladen.</div>
+    </div>
+  </div>
+
+  <div class="statsGrid" style="padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(6,10,19,.8)">
+    <div class="stat"><div class="k">Loop Mean GT Pct</div><div class="v" id="statMeanPct">–</div><div class="s" id="statMeanPctSub">–</div></div>
+    <div class="stat"><div class="k">Bottom1</div><div class="v" id="statBottom1">–</div><div class="s" id="statBottom1Sub">–</div></div>
+    <div class="stat"><div class="k">Bottom3</div><div class="v" id="statBottom3">–</div><div class="s" id="statBottom3Sub">–</div></div>
+    <div class="stat"><div class="k">Bottom5</div><div class="v" id="statBottom5">–</div><div class="s" id="statBottom5Sub">–</div></div>
+    <div class="stat"><div class="k">Saturation</div><div class="v" id="statSat">–</div><div class="s" id="statSatSub">–</div></div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="section">
+        <h4>Samples</h4>
+        <div class="sub" id="sampleMeta">Noch keine Stichprobe geladen.</div>
+      </div>
+      <div class="scroll sampleList" id="sampleList"></div>
+      <div class="section">
+        <h4>Config Progress</h4>
+        <div class="sub">Anzahl fertiger Samples pro Parameterkonfiguration.</div>
+      </div>
+      <div class="scroll configList" id="configList"></div>
+    </div>
+
+    <div class="center">
+      <div class="centerHead">
+        <div class="centerTitle" id="centerTitle">Kein Sample gewählt.</div>
+        <div class="grow"></div>
+        <div class="tabs" id="loopTabs"></div>
+      </div>
+      <div class="content" id="content">
+        <div class="notice">Output-Ordner und Cache-Ordner wählen. Danach liest die UI live den Fortschritt und zeigt pro Sample die Fenster von niedrigem zu hohem Score.</div>
+      </div>
+    </div>
+
+    <div class="detail">
+      <div class="section">
+        <h4>Fenster-Detail</h4>
+        <div class="sub" id="detailTitle">Kein Fenster gewählt.</div>
+      </div>
+      <div class="detailBody" id="detailBody">
+        <div class="notice">Hier erscheinen Rank, Score, GT-Overlay, Loop-Kontext, Sample-Metadaten und Live/Final-Quelle des gewählten Fensters.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const UI = {
+    modeLabel: $('modeLabel'),
+    pollLabel: $('pollLabel'),
+    lastReadLabel: $('lastReadLabel'),
+    folderInfo: $('folderInfo'),
+    pickOutputBtn: $('pickOutputBtn'),
+    pickCacheBtn: $('pickCacheBtn'),
+    pickDatasetBtn: $('pickDatasetBtn'),
+    refreshBtn: $('refreshBtn'),
+    pollBtn: $('pollBtn'),
+    pollInterval: $('pollInterval'),
+    refreshInfo: $('refreshInfo'),
+    sampleSearch: $('sampleSearch'),
+    loopSelect: $('loopSelect'),
+    viewSelect: $('viewSelect'),
+    miniSamples: $('miniSamples'),
+    miniConfigs: $('miniConfigs'),
+    miniDone: $('miniDone'),
+    progressFill: $('progressFill'),
+    progressText: $('progressText'),
+    statMeanPct: $('statMeanPct'),
+    statMeanPctSub: $('statMeanPctSub'),
+    statBottom1: $('statBottom1'),
+    statBottom1Sub: $('statBottom1Sub'),
+    statBottom3: $('statBottom3'),
+    statBottom3Sub: $('statBottom3Sub'),
+    statBottom5: $('statBottom5'),
+    statBottom5Sub: $('statBottom5Sub'),
+    statSat: $('statSat'),
+    statSatSub: $('statSatSub'),
+    sampleMeta: $('sampleMeta'),
+    sampleList: $('sampleList'),
+    configList: $('configList'),
+    centerTitle: $('centerTitle'),
+    loopTabs: $('loopTabs'),
+    content: $('content'),
+    detailTitle: $('detailTitle'),
+    detailBody: $('detailBody'),
+  };
+
+  const CONFIG_ORDER = [
+    'regime_combo_00','regime_combo_01','regime_combo_02','regime_combo_03','regime_combo_04','regime_combo_05',
+    'regime_combo_06','regime_combo_07','regime_combo_08','regime_combo_09','regime_combo_10','regime_combo_11',
+    'regime_combo_12','regime_combo_13','regime_combo_14','regime_combo_15',
+    'Lup_Ddown_Qdown_Bup','Ldown_Dup_Qup_Bdown','baseline_default','run_probe_0001'
+  ];
+
+  const STATE = {
+    outputDir: null,
+    cacheDir: null,
+    datasetDir: null,
+    pollTimer: null,
+    selectedSample: null,
+    selectedConfig: null,
+    selectedLoop: 5,
+    selectedWindow: null,
+    selectedWindowSource: null,
+    sampleIds: [],
+    sampleIndexMap: new Map(),
+    loopSummary: [],
+    loopRowsByLoop: new Map(),
+    configProgress: new Map(),
+    runtimeCacheIndex: new Map(),
+    sampleGroundTruth: new Map(),
+  };
+
+  function fmt(v, digits = 3) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '–';
+    return Number(v).toFixed(digits);
+  }
+
+  function pct(v) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return '–';
+    return `${(100 * Number(v)).toFixed(1)}%`;
+  }
+
+  function esc(s) {
+    return String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  }
+
+  function csvParse(text) {
+    const rows = [];
+    let headers = null, row = [], cell = '', inQ = false;
+    const emit = () => {
+      const line = row.slice();
+      row = [];
+      if (!headers) {
+        headers = line.map(x => x.trim().replace(/^\uFEFF/, ''));
+        return;
+      }
+      if (line.length === 1 && !String(line[0] || '').trim()) return;
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (line[i] ?? '').trim());
+      rows.push(obj);
+    };
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { cell += '"'; i++; }
+          else inQ = false;
+        } else cell += ch;
+        continue;
+      }
+      if (ch === '"') { inQ = true; continue; }
+      if (ch === ',') { row.push(cell); cell = ''; continue; }
+      if (ch === '\n') { row.push(cell); cell = ''; emit(); continue; }
+      if (ch === '\r') continue;
+      cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); emit(); }
+    return rows;
+  }
+
+  async function readFile(handle) {
+    const file = await handle.getFile();
+    return file.text();
+  }
+
+  async function maybeRead(handle, parser = x => x) {
+    try {
+      return parser(await readFile(handle));
+    } catch {
+      return null;
+    }
+  }
+
+  async function chooseDirectory(kind) {
+    if (!window.showDirectoryPicker) {
+      UI.folderInfo.textContent = 'Dieser Browser unterstützt showDirectoryPicker nicht. Nimm Edge oder Chrome.';
+      return null;
+    }
+    return window.showDirectoryPicker({ mode: 'read' });
+  }
+
+  async function loadSelectedSamples() {
+    if (!STATE.outputDir) return false;
+    try {
+      const handle = await STATE.outputDir.getFileHandle('selected_samples.csv');
+      const rows = csvParse(await readFile(handle));
+      STATE.sampleIds = rows.map(r => r.sample_id).filter(Boolean);
+      STATE.sampleIndexMap = new Map(STATE.sampleIds.map((id, idx) => [id, idx]));
+      if (!STATE.selectedSample && STATE.sampleIds.length) STATE.selectedSample = STATE.sampleIds[0];
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function loadLoopSummary() {
+    STATE.loopSummary = [];
+    STATE.loopRowsByLoop = new Map();
+    if (!STATE.outputDir) return;
+    try {
+      const summaryHandle = await STATE.outputDir.getFileHandle('parameter_chain_loop_summary.csv');
+      STATE.loopSummary = csvParse(await readFile(summaryHandle)).map(r => ({
+        loop_count: Number(r.loop_count),
+        mean_gt_pct_low_to_high: Number(r.mean_gt_pct_low_to_high),
+        bottom1: Number(r.bottom1),
+        bottom3: Number(r.bottom3),
+        bottom5: Number(r.bottom5),
+        bottom_quartile: Number(r.bottom_quartile),
+        gt_count_in_bottom5_mean: Number(r.gt_count_in_bottom5_mean),
+        p_left_low_shift: Number(r.p_left_low_shift),
+        saturation_assessment: r.saturation_assessment || '–',
+      })).sort((a,b)=>a.loop_count-b.loop_count);
+      const rowHandle = await STATE.outputDir.getFileHandle('parameter_chain_loop_final_rows.csv');
+      const rows = csvParse(await readFile(rowHandle));
+      for (const row of rows) {
+        const loop = Number(row.loop_count);
+        if (!STATE.loopRowsByLoop.has(loop)) STATE.loopRowsByLoop.set(loop, new Map());
+        const bySample = STATE.loopRowsByLoop.get(loop);
+        const sampleId = row.sample_id;
+        if (!bySample.has(sampleId)) bySample.set(sampleId, []);
+        bySample.get(sampleId).push({
+          sample_id: sampleId,
+          slot: Number(row.slot),
+          gt_overlap: String(row.gt_overlap).toLowerCase() === 'true',
+          loop_score: Number(row.loop_score),
+          rank: Number(row.rank),
+          percentile: Number(row.percentile_low_to_high),
+        });
+      }
+      for (const bySample of STATE.loopRowsByLoop.values()) {
+        for (const rows of bySample.values()) rows.sort((a,b)=>a.rank-b.rank);
+      }
+    } catch {}
+  }
+
+  async function loadGroundTruthForSample(sampleId) {
+    if (!STATE.datasetDir || STATE.sampleGroundTruth.has(sampleId)) return;
+    try {
+      const dir = await STATE.datasetDir.getDirectoryHandle(sampleId);
+      const handle = await dir.getFileHandle('ground_truth.json');
+      const gt = JSON.parse(await readFile(handle));
+      STATE.sampleGroundTruth.set(sampleId, gt);
+    } catch {}
+  }
+
+  function gtOverlapFromGroundTruth(sampleId, start, end) {
+    const gt = STATE.sampleGroundTruth.get(sampleId);
+    if (!gt) return null;
+    const s0 = Number(gt.signal_start), s1 = Number(gt.signal_end);
+    return Math.max(start, s0) < Math.min(end, s1);
+  }
+
+  async function scanCacheProgress() {
+    STATE.configProgress = new Map(CONFIG_ORDER.map(id => [id, { done: 0, latest: null }]));
+    STATE.runtimeCacheIndex = new Map();
+    if (!STATE.cacheDir) return;
+    const runtimeRuns = await STATE.cacheDir.getDirectoryHandle('runtime_runs').catch(() => null);
+    if (!runtimeRuns) return;
+    for await (const [name, handle] of runtimeRuns.entries()) {
+      if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+      const m = name.match(/^(.*)_s(\d{3})\.json$/);
+      if (!m) continue;
+      const configId = m[1];
+      const sampleIndex = Number(m[2]);
+      if (!STATE.configProgress.has(configId)) STATE.configProgress.set(configId, { done: 0, latest: null });
+      const stat = STATE.configProgress.get(configId);
+      stat.done += 1;
+      stat.latest = name;
+      if (!STATE.runtimeCacheIndex.has(configId)) STATE.runtimeCacheIndex.set(configId, new Map());
+      STATE.runtimeCacheIndex.get(configId).set(sampleIndex, handle);
+    }
+  }
+
+  async function parseRuntimeManifest(configId, sampleId) {
+    if (!STATE.runtimeCacheIndex.has(configId)) return null;
+    const sampleIndex = STATE.sampleIndexMap.get(sampleId);
+    const handle = STATE.runtimeCacheIndex.get(configId).get(sampleIndex);
+    if (!handle) return null;
+    const data = JSON.parse(await readFile(handle));
+    const windows = data.resolved_grid.windows || [];
+    const channelCount = Number(data.resolved_grid.channel_count || data.resolved_grid.channelCount || 1);
+    const pvals = data.runtime_surface?.p_values || [];
+    const rows = [];
+    for (let i = 0; i < windows.length; i++) {
+      const start = i * channelCount;
+      const slice = pvals.slice(start, start + channelCount).map(Number);
+      const score = slice.reduce((a,b)=>a+b,0) / Math.max(1, slice.length);
+      const win = windows[i];
+      await loadGroundTruthForSample(sampleId);
+      rows.push({
+        slot: i + 1,
+        rank: null,
+        window_start: Number(win.start),
+        window_end: Number(win.end),
+        score,
+        gt_overlap: gtOverlapFromGroundTruth(sampleId, Number(win.start), Number(win.end)),
+      });
+    }
+    rows.sort((a,b)=>(a.score-b.score) || (a.slot-b.slot));
+    rows.forEach((r, idx) => r.rank = idx + 1);
+    return rows;
+  }
+
+  function getLoopRows(sampleId) {
+    const loop = Number(STATE.selectedLoop);
+    return STATE.loopRowsByLoop.get(loop)?.get(sampleId) || null;
+  }
+
+  function heat(score, min, max, gt) {
+    const t = max <= min ? 0.5 : (score - min) / (max - min);
+    const r = t < 0.5 ? Math.round(255 * (t / 0.5)) : 255;
+    const g = t < 0.5 ? Math.round(220 - 40 * (t / 0.5)) : Math.round(180 - 110 * ((t - 0.5) / 0.5));
+    const b = t < 0.5 ? Math.round(100 - 30 * (t / 0.5)) : Math.round(70 - 30 * ((t - 0.5) / 0.5));
+    const overlay = gt ? 'inset 0 0 0 2px rgba(139,109,255,.95)' : 'none';
+    return `background:linear-gradient(180deg, rgba(${r},${g},${b},.9), rgba(11,16,29,.96)); box-shadow:${overlay};`;
+  }
+
+  function renderStats() {
+    const loop = STATE.loopSummary.find(x => x.loop_count === Number(STATE.selectedLoop));
+    UI.miniSamples.textContent = STATE.sampleIds.length || '–';
+    UI.miniConfigs.textContent = String(STATE.configProgress.size || CONFIG_ORDER.length);
+    const done = [...STATE.configProgress.values()].reduce((a, x) => a + (x.done || 0), 0);
+    UI.miniDone.textContent = done || '–';
+    const target = Math.max(1, STATE.sampleIds.length * Math.max(STATE.configProgress.size || 0, CONFIG_ORDER.length));
+    const ratio = Math.min(1, done / target);
+    UI.progressFill.style.width = `${100 * ratio}%`;
+    UI.progressText.textContent = `${done}/${target} runtime manifests`;
+    if (loop) {
+      UI.statMeanPct.textContent = fmt(loop.mean_gt_pct_low_to_high, 4);
+      UI.statMeanPctSub.textContent = `p_left=${fmt(loop.p_left_low_shift, 4)}`;
+      UI.statBottom1.textContent = fmt(loop.bottom1, 3);
+      UI.statBottom1Sub.textContent = `low1`;
+      UI.statBottom3.textContent = fmt(loop.bottom3, 3);
+      UI.statBottom3Sub.textContent = `low3`;
+      UI.statBottom5.textContent = fmt(loop.bottom5, 3);
+      UI.statBottom5Sub.textContent = `low5`;
+      UI.statSat.textContent = loop.saturation_assessment || '–';
+      UI.statSatSub.textContent = `GT@5=${fmt(loop.gt_count_in_bottom5_mean, 3)}`;
+    } else {
+      UI.statMeanPct.textContent = UI.statBottom1.textContent = UI.statBottom3.textContent = UI.statBottom5.textContent = UI.statSat.textContent = '–';
+      UI.statMeanPctSub.textContent = UI.statBottom1Sub.textContent = UI.statBottom3Sub.textContent = UI.statBottom5Sub.textContent = UI.statSatSub.textContent = 'Noch keine Final-Summary';
+    }
+  }
+
+  function renderLoopTabs() {
+    UI.loopTabs.innerHTML = '';
+    UI.loopSelect.innerHTML = '';
+    const loops = STATE.loopSummary.length ? STATE.loopSummary.map(x => x.loop_count) : [5,10,15,20];
+    for (const loop of loops) {
+      const btn = document.createElement('button');
+      btn.textContent = `${loop} loops`;
+      btn.className = loop === Number(STATE.selectedLoop) ? 'active' : '';
+      btn.onclick = () => { STATE.selectedLoop = loop; renderAll(); };
+      UI.loopTabs.appendChild(btn);
+      const opt = document.createElement('option');
+      opt.value = String(loop);
+      opt.textContent = `${loop} loops`;
+      if (loop === Number(STATE.selectedLoop)) opt.selected = true;
+      UI.loopSelect.appendChild(opt);
+    }
+  }
+
+  function renderSampleList() {
+    const q = UI.sampleSearch.value.trim().toLowerCase();
+    const filtered = STATE.sampleIds.filter(id => !q || id.toLowerCase().includes(q));
+    UI.sampleMeta.textContent = `${filtered.length}/${STATE.sampleIds.length} Samples`;
+    UI.sampleList.innerHTML = filtered.map(id => {
+      const rows = getLoopRows(id);
+      const runtimeDone = [...STATE.configProgress.values()].filter(x => (x.done || 0) > (STATE.sampleIndexMap.get(id) ?? 9e9)).length;
+      return `<div class="sampleItem ${id===STATE.selectedSample?'active':''}" data-sample="${esc(id)}">
+        <div class="top"><div class="name">${esc(id)}</div><div class="miniBadge">${runtimeDone}/${STATE.configProgress.size || CONFIG_ORDER.length}</div></div>
+        <div class="meta">${rows ? `loop rows ready · ${rows.length} windows` : 'final rows pending'}</div>
+      </div>`;
+    }).join('');
+    UI.sampleList.querySelectorAll('.sampleItem').forEach(el => el.onclick = () => { STATE.selectedSample = el.dataset.sample; STATE.selectedWindow = null; renderAll(); });
+  }
+
+  function renderConfigList() {
+    const entries = [...STATE.configProgress.entries()];
+    entries.sort((a,b) => CONFIG_ORDER.indexOf(a[0]) - CONFIG_ORDER.indexOf(b[0]));
+    UI.configList.innerHTML = entries.map(([id, info]) => {
+      const active = id === STATE.selectedConfig ? 'active' : '';
+      return `<div class="configItem ${active}" data-config="${esc(id)}">
+        <div class="top"><div class="name">${esc(id)}</div><div class="miniBadge">${info.done}/${STATE.sampleIds.length || 50}</div></div>
+        <div class="meta">${info.latest ? esc(info.latest) : 'noch keine Datei'}</div>
+      </div>`;
+    }).join('');
+    UI.configList.querySelectorAll('.configItem').forEach(el => el.onclick = () => { STATE.selectedConfig = el.dataset.config; renderAll(); });
+  }
+
+  function renderLoopCards() {
+    if (!STATE.loopSummary.length) return '<div class="notice">Finale Loop-Summary noch nicht geschrieben. Live-Ansicht nutzt bis dahin die Runtime-Manifeste aus dem Cache.</div>';
+    return `<div class="loopCards">${STATE.loopSummary.map(loop => `
+      <div class="loopCard ${loop.loop_count===Number(STATE.selectedLoop)?'active':''}" data-loop="${loop.loop_count}">
+        <div class="loop">${loop.loop_count} loops</div>
+        <div class="value">${fmt(loop.mean_gt_pct_low_to_high,4)}</div>
+        <div class="meta">b1 ${fmt(loop.bottom1)} · b3 ${fmt(loop.bottom3)} · b5 ${fmt(loop.bottom5)}<br>sat ${esc(loop.saturation_assessment)}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  async function renderWindowArea() {
+    if (!STATE.selectedSample) {
+      UI.centerTitle.textContent = 'Kein Sample gewählt.';
+      UI.content.innerHTML = '<div class="notice">Sample auswählen.</div>';
+      return;
+    }
+    UI.centerTitle.innerHTML = `Sample <strong>${esc(STATE.selectedSample)}</strong> · Ansicht <strong>${esc(UI.viewSelect.value)}</strong>`;
+    let rows = null;
+    let sourceLabel = '';
+    if (UI.viewSelect.value === 'final') {
+      rows = getLoopRows(STATE.selectedSample);
+      sourceLabel = rows ? `Final loop ${STATE.selectedLoop}` : 'Final loop rows fehlen';
+    }
+    if (!rows) {
+      const fallbackConfig = STATE.selectedConfig || [...STATE.configProgress.entries()].sort((a,b)=>(b[1].done||0)-(a[1].done||0))[0]?.[0] || CONFIG_ORDER[0];
+      STATE.selectedConfig = fallbackConfig;
+      rows = await parseRuntimeManifest(fallbackConfig, STATE.selectedSample);
+      sourceLabel = rows ? `Live runtime ${fallbackConfig}` : 'Keine Runtime-Datei für dieses Sample';
+    }
+    if (!rows || !rows.length) {
+      UI.content.innerHTML = `${renderLoopCards()}<div class="notice">Für dieses Sample liegt noch keine darstellbare Datei vor.</div>`;
+      attachLoopCardEvents();
+      return;
+    }
+    const scores = rows.map(r => Number(r.loop_score ?? r.score));
+    const min = Math.min(...scores), max = Math.max(...scores);
+    const tiles = rows.map((r, idx) => {
+      const score = Number(r.loop_score ?? r.score);
+      const rank = Number(r.rank ?? (idx + 1));
+      const isActive = STATE.selectedWindow === r.slot && STATE.selectedWindowSource === sourceLabel;
+      return `<div class="win ${r.gt_overlap?'gt':''} ${isActive?'active':''}" data-slot="${r.slot}" data-source="${esc(sourceLabel)}" style="${heat(score,min,max,!!r.gt_overlap)}">
+        <div class="r">#${rank}</div>
+        <div class="slot">W${r.slot}</div>
+        <div class="score">${fmt(score,4)}</div>
+        <div class="foot">${r.gt_overlap ? 'GT' : 'nonGT'} · ${sourceLabel}</div>
+      </div>`;
+    }).join('');
+    UI.content.innerHTML = `${renderLoopCards()}<div class="notice" style="margin-bottom:14px">Quelle: ${esc(sourceLabel)} · Fenster links→rechts = niedriger nach höherem Score. Violetter Rahmen markiert GT-Overlap.</div><div class="windowLane">${tiles}</div>`;
+    attachLoopCardEvents();
+    UI.content.querySelectorAll('.win').forEach(el => {
+      el.onclick = () => {
+        STATE.selectedWindow = Number(el.dataset.slot);
+        STATE.selectedWindowSource = el.dataset.source;
+        renderAll();
+      };
+    });
+    renderDetail(rows, sourceLabel);
+  }
+
+  function renderDetail(rows = null, sourceLabel = null) {
+    if (!STATE.selectedSample) {
+      UI.detailTitle.textContent = 'Kein Sample gewählt.';
+      UI.detailBody.innerHTML = '<div class="notice">Sample wählen.</div>';
+      return;
+    }
+    if (!rows) rows = getLoopRows(STATE.selectedSample);
+    if (!rows && STATE.selectedConfig) {
+      UI.detailTitle.textContent = `${STATE.selectedSample}`;
+      UI.detailBody.innerHTML = '<div class="notice">Fenster wählen.</div>';
+      return;
+    }
+    if (STATE.selectedWindow == null) {
+      UI.detailTitle.textContent = `${STATE.selectedSample}`;
+      UI.detailBody.innerHTML = `<div class="notice">Kein Fenster gewählt.<br>Quelle: ${esc(sourceLabel || '–')}</div>`;
+      return;
+    }
+    const row = rows?.find(r => Number(r.slot) === Number(STATE.selectedWindow));
+    if (!row) {
+      UI.detailTitle.textContent = `${STATE.selectedSample}`;
+      UI.detailBody.innerHTML = '<div class="notice">Dieses Fenster ist in der aktuellen Ansicht nicht vorhanden.</div>';
+      return;
+    }
+    UI.detailTitle.textContent = `${STATE.selectedSample} · W${row.slot}`;
+    const score = Number(row.loop_score ?? row.score);
+    const rank = Number(row.rank);
+    const gt = row.gt_overlap;
+    const sampleIdx = STATE.sampleIndexMap.get(STATE.selectedSample);
+    UI.detailBody.innerHTML = `
+      <div class="kv">
+        <div class="card"><div class="k">Source</div><div class="v">${esc(sourceLabel || '–')}</div></div>
+        <div class="card"><div class="k">Rank</div><div class="v">#${rank}</div></div>
+        <div class="card"><div class="k">Score</div><div class="v">${fmt(score,6)}</div></div>
+        <div class="card"><div class="k">GT Overlap</div><div class="v ${gt?'ok':'bad'}">${gt}</div></div>
+        <div class="card"><div class="k">Sample Index</div><div class="v">${sampleIdx ?? '–'}</div></div>
+        <div class="card"><div class="k">Loop</div><div class="v">${STATE.selectedLoop}</div></div>
+      </div>
+      <div class="progressBar"><span style="width:${Math.max(0,Math.min(100,100*(1-score)))}%"></span></div>
+      <div class="pre">Sample: ${STATE.selectedSample}
+Window slot: ${row.slot}
+Rank low→high: ${rank}
+Score: ${fmt(score,6)}
+GT overlap: ${gt}
+Source: ${sourceLabel || '–'}
+Selected config: ${STATE.selectedConfig || '–'}
+Loop selected: ${STATE.selectedLoop}</div>`;
+  }
+
+  function attachLoopCardEvents() {
+    UI.content.querySelectorAll('.loopCard').forEach(el => el.onclick = () => {
+      STATE.selectedLoop = Number(el.dataset.loop);
+      renderAll();
+    });
+  }
+
+  async function refreshAll() {
+    const started = new Date();
+    UI.modeLabel.textContent = 'reading';
+    await loadSelectedSamples();
+    await loadLoopSummary();
+    await scanCacheProgress();
+    if (STATE.datasetDir && STATE.selectedSample) await loadGroundTruthForSample(STATE.selectedSample);
+    UI.lastReadLabel.textContent = started.toLocaleTimeString('de-DE');
+    UI.refreshInfo.textContent = `Refresh ${started.toLocaleTimeString('de-DE')} · output ${STATE.outputDir ? 'ok' : '–'} · cache ${STATE.cacheDir ? 'ok' : '–'}`;
+    UI.modeLabel.textContent = 'ready';
+    renderAll();
+  }
+
+  function renderAll() {
+    renderLoopTabs();
+    renderStats();
+    renderSampleList();
+    renderConfigList();
+    renderWindowArea();
+  }
+
+  function setPolling(active) {
+    if (STATE.pollTimer) clearInterval(STATE.pollTimer);
+    STATE.pollTimer = null;
+    if (active) {
+      const interval = Number(UI.pollInterval.value);
+      STATE.pollTimer = setInterval(refreshAll, interval);
+      UI.pollLabel.textContent = `${interval/1000}s`;
+      UI.pollBtn.textContent = 'Auto-Poll stoppen';
+      UI.pollBtn.classList.add('active');
+    } else {
+      UI.pollLabel.textContent = 'off';
+      UI.pollBtn.textContent = 'Auto-Poll starten';
+      UI.pollBtn.classList.remove('active');
+    }
+  }
+
+  UI.pickOutputBtn.onclick = async () => {
+    STATE.outputDir = await chooseDirectory('output');
+    if (STATE.outputDir) {
+      UI.folderInfo.textContent = `Output: ${STATE.outputDir.name} · Cache: ${STATE.cacheDir?.name || '–'} · Dataset: ${STATE.datasetDir?.name || '–'}`;
+      await refreshAll();
+    }
+  };
+  UI.pickCacheBtn.onclick = async () => {
+    STATE.cacheDir = await chooseDirectory('cache');
+    if (STATE.cacheDir) {
+      UI.folderInfo.textContent = `Output: ${STATE.outputDir?.name || '–'} · Cache: ${STATE.cacheDir.name} · Dataset: ${STATE.datasetDir?.name || '–'}`;
+      await refreshAll();
+    }
+  };
+  UI.pickDatasetBtn.onclick = async () => {
+    STATE.datasetDir = await chooseDirectory('dataset');
+    if (STATE.datasetDir) {
+      UI.folderInfo.textContent = `Output: ${STATE.outputDir?.name || '–'} · Cache: ${STATE.cacheDir?.name || '–'} · Dataset: ${STATE.datasetDir.name}`;
+      await refreshAll();
+    }
+  };
+  UI.refreshBtn.onclick = refreshAll;
+  UI.pollBtn.onclick = () => setPolling(!STATE.pollTimer);
+  UI.loopSelect.onchange = () => { STATE.selectedLoop = Number(UI.loopSelect.value); renderAll(); };
+  UI.viewSelect.onchange = renderAll;
+  UI.sampleSearch.oninput = renderSampleList;
+})();
+</script>
+</body>
+</html>

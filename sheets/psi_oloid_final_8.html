@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Ψ-Oloid · Envelope Positioning</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#00060f;overflow:hidden;font-family:'IBM Plex Mono',monospace;color:#445566;}
+
+#root{
+  display:grid;
+  grid-template-columns:1fr 300px;
+  grid-template-rows:1fr 180px;
+  width:100vw;height:100vh;
+}
+#view3d{grid-column:1;grid-row:1/3;position:relative;}
+#view3d canvas{display:block;width:100%!important;height:100%!important;}
+
+/* ── right panel ── */
+#sidebar{
+  grid-column:2;grid-row:1/3;
+  display:flex;flex-direction:column;
+  border-left:1px solid #060f1c;
+  overflow:hidden;
+}
+
+.ch-panel{
+  flex:1;overflow-y:auto;
+  padding:14px 14px 10px;
+  border-bottom:1px solid #060f1c;
+}
+.ch-panel::-webkit-scrollbar{width:3px;}
+.ch-panel::-webkit-scrollbar-track{background:#00060f;}
+.ch-panel::-webkit-scrollbar-thumb{background:#0a1828;}
+
+.ch-title{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  margin-bottom:10px;padding-bottom:6px;
+  border-bottom:1px solid #060f1c;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.ch1-title{color:#4488ff;}
+.ch2-title{color:#ff5522;}
+
+/* slider rows */
+.srow{margin:5px 0;}
+.srow-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:2px;
+}
+.srow-lbl{font-size:9px;letter-spacing:.08em;color:#2a3a4a;}
+.srow-val{font-size:11px;font-weight:500;}
+/* exact-value text input next to slider */
+.num-input{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;background:#010c18;
+  border:1px solid #0d2030;border-radius:2px;
+  padding:1px 4px;width:58px;outline:none;
+  text-align:right;
+}
+.num-input.c1i{color:#4488ff;border-color:#112244;}
+.num-input.c2i{color:#ff5522;border-color:#441108;}
+.num-input:focus{border-color:#2244aa;}
+.c1v{color:#4488ff;} .c2v{color:#ff5522;}
+input[type=range]{
+  width:100%;height:2px;
+  -webkit-appearance:none;
+  background:#050f1e;border-radius:1px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:10px;height:10px;border-radius:50%;
+  background:#1a2a3a;border:1px solid #2a3a4a;
+}
+.ch1 input[type=range]::-webkit-slider-thumb{background:#1133aa;}
+.ch2 input[type=range]::-webkit-slider-thumb{background:#aa2200;}
+
+.sep{height:1px;background:#060f1c;margin:8px 0;}
+
+/* envelope readout */
+.env-out{
+  display:flex;gap:6px;align-items:center;margin:6px 0 8px;
+  padding:6px 8px;background:#020810;border-radius:2px;
+}
+.env-label{font-size:9px;color:#1a2a3a;}
+.env-val{font-size:14px;font-weight:500;}
+.env-bar{flex:1;height:3px;background:#050f1e;border-radius:1px;overflow:hidden;}
+.env-fill{height:100%;border-radius:1px;transition:width .05s;}
+.c1 .env-fill{background:#1133aa;}
+.c2 .env-fill{background:#aa2200;}
+
+/* bottom stats strip */
+#stats{
+  position:absolute;bottom:0;left:0;
+  width:calc(100% - 300px);
+  height:180px;
+  border-top:1px solid #060f1c;
+  background:rgba(0,3,10,0.95);
+  display:grid;grid-template-columns:1fr 1fr;
+}
+.osc-pane{padding:8px 12px 6px;position:relative;}
+.osc-pane:first-child{border-right:1px solid #060f1c;}
+.osc-title{font-size:8px;letter-spacing:.14em;color:#1a2a3a;margin-bottom:3px;display:flex;justify-content:space-between;}
+canvas.osc{display:block;width:100%;}
+
+/* overlay labels */
+.ov-lbl{
+  position:absolute;font-size:8px;letter-spacing:.1em;
+  pointer-events:none;padding:2px 5px;border-radius:2px;
+}
+
+/* formula display */
+.formula{
+  font-size:8.5px;color:#1a2c3a;letter-spacing:.04em;
+  padding:5px 7px;background:#010810;border-radius:2px;
+  margin-bottom:8px;line-height:1.7;
+}
+.formula span{color:#2a4a5a;}
+
+/* ── Record bar ── */
+#rec-bar{
+  position:absolute;top:14px;left:14px;
+  display:flex;align-items:center;gap:10px;
+  z-index:100;
+}
+#rec-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  padding:6px 14px;border-radius:2px;cursor:pointer;
+  border:1px solid #1a3a1a;background:#010e06;color:#2a6a2a;
+  transition:all .15s;
+}
+#rec-btn.recording{border-color:#44aa44;color:#66ff66;background:#010e06;animation:recpulse 1s infinite;}
+@keyframes recpulse{0%,100%{box-shadow:0 0 4px #44aa4455}50%{box-shadow:0 0 10px #44aa44aa}}
+#rec-btn.done{border-color:#1a3a6a;color:#4488ff;background:#010812;}
+#rec-dot{width:6px;height:6px;border-radius:50%;background:#2a4a2a;transition:background .2s;}
+#rec-dot.on{background:#66ff66;animation:dotpulse .8s infinite;}
+@keyframes dotpulse{0%,100%{opacity:1}50%{opacity:.3}}
+#rec-status{font-size:9px;letter-spacing:.1em;color:#1a3a2a;min-width:130px;}
+#export-btn{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;padding:6px 14px;border-radius:2px;cursor:pointer;
+  border:1px solid #0a2a4a;background:#010812;color:#224488;
+  transition:all .15s;display:none;
+}
+#export-btn.ready{display:inline-block;color:#4488cc;border-color:#224488;}
+#export-btn:hover.ready{color:#88ccff;border-color:#4488ff;}
+#rate-wrap{display:flex;align-items:center;gap:5px;}
+#rate-wrap label{font-size:9px;color:#1a2a1a;letter-spacing:.07em;}
+#rec-rate{
+  font-family:inherit;font-size:9px;background:#010812;border:1px solid #0a1828;
+  color:#2a4a3a;padding:4px 5px;border-radius:2px;width:48px;outline:none;
+}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="view3d">
+
+    <!-- Record bar -->
+    <div id="rec-bar">
+      <div id="rec-dot"></div>
+      <button id="rec-btn">● Record</button>
+      <button id="export-btn">↓ Excel</button>
+      <span id="rec-status">bereit</span>
+      <div id="rate-wrap">
+        <label>Hz</label>
+        <input id="rec-rate" type="number" min="1" max="60" value="10"/>
+      </div>
+    </div>
+
+    <div id="stats">
+      <div class="osc-pane">
+        <div class="osc-title">
+          <span style="color:#2244aa">|Δr(t)| · Gesamtabstand</span>
+          <span id="dist-range" style="color:#0a1828">—</span>
+        </div>
+        <canvas class="osc" id="osc-dist" height="138"></canvas>
+      </div>
+      <div class="osc-pane">
+        <div class="osc-title">
+          <span style="color:#224">Δx <span style="color:#2244aa">—</span> Δy <span style="color:#224422">—</span> Δz <span style="color:#443322">—</span></span>
+          <span id="comp-range" style="color:#0a1828">—</span>
+        </div>
+        <canvas class="osc" id="osc-comp" height="138"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+
+    <!-- Channel 1 -->
+    <div class="ch-panel ch1">
+      <div class="ch-title ch1-title">
+        <span>OBS · T₁ (XZ)</span>
+        <span style="color:#1133aa;font-size:8px">blauer donut</span>
+      </div>
+
+      <div class="formula">
+        R<sub>ψ</sub>(y) = cos(<span>λ</span>·arctan((y−<span>ψ</span>)/<span>δ</span>))<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;· exp(−<span>α</span>·((y−<span>ψ</span>)/<span>β</span>)²)
+      </div>
+
+      <div class="env-out c1">
+        <span class="env-label">R_ψ(y)</span>
+        <span class="env-val c1v" id="e1-val">1.000</span>
+        <div class="env-bar"><div class="env-fill" id="e1-bar" style="width:100%"></div></div>
+        <span class="env-label" id="e1-theta">Θ=0.000</span>
+      </div>
+
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">y — event coord</span>
+          <input class="num-input c1i" id="n1-y" value="0" step="0.0001"/>
+        </div>
+        <input type="range" id="s1-y" min="-6.28" max="6.28" step="0.0001" value="0"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">λ — freq multiplier</span>
+          <input class="num-input c1i" id="n1-lam" value="4" step="0.01"/>
+        </div>
+        <input type="range" id="s1-lam" min="0.5" max="20" step="0.01" value="4"/>
+      </div>
+      <div class="srow" style="margin-top:3px;padding:5px 6px 5px;background:#010c18;border-radius:2px;border-left:2px solid #1133aa44;">
+        <div class="srow-head">
+          <span class="srow-lbl" style="color:#2244aa">dλ — Zeitfluss (λ-Tick/s)</span>
+          <input class="num-input c1i" id="n1-dlam" value="0" step="0.01"/>
+        </div>
+        <input type="range" id="s1-dlam" min="0" max="6" step="0.01" value="0"/>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;">
+          <span style="font-size:8px;color:#112233">still</span>
+          <span style="font-size:8px;color:#2244aa" id="v1-lam-live">λ=4.00</span>
+          <span style="font-size:8px;color:#112233">schnell</span>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">ψ — reference / vanishing</span>
+          <input class="num-input c1i" id="n1-psi" value="1.5708" step="0.0001"/>
+        </div>
+        <input type="range" id="s1-psi" min="-3.14" max="3.14" step="0.0001" value="1.5708"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">δ — shape / peak spacing</span>
+          <input class="num-input c1i" id="n1-del" value="1" step="0.001"/>
+        </div>
+        <input type="range" id="s1-del" min="0.001" max="4" step="0.001" value="1"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">α — gauss width</span>
+          <input class="num-input c1i" id="n1-alp" value="0.5" step="0.001"/>
+        </div>
+        <input type="range" id="s1-alp" min="0.01" max="4" step="0.001" value="0.5"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">β — gauss scale</span>
+          <input class="num-input c1i" id="n1-bet" value="2" step="0.01"/>
+        </div>
+        <input type="range" id="s1-bet" min="0.1" max="8" step="0.01" value="2"/>
+      </div>
+    </div>
+
+    <!-- Channel 2 -->
+    <div class="ch-panel ch2">
+      <div class="ch-title ch2-title">
+        <span>REF · T₂ (XY)</span>
+        <span style="color:#aa2200;font-size:8px">roter donut</span>
+      </div>
+
+      <div class="formula">
+        R<sub>ψ</sub>(y) = cos(<span>λ</span>·arctan((y−<span>ψ</span>)/<span>δ</span>))<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;· exp(−<span>α</span>·((y−<span>ψ</span>)/<span>β</span>)²)
+      </div>
+
+      <div class="env-out c2">
+        <span class="env-label">R_ψ(y)</span>
+        <span class="env-val c2v" id="e2-val">1.000</span>
+        <div class="env-bar"><div class="env-fill" id="e2-bar" style="width:100%"></div></div>
+        <span class="env-label" id="e2-theta">Θ=0.000</span>
+      </div>
+
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">y — event coord</span>
+          <input class="num-input c2i" id="n2-y" value="0" step="0.0001"/>
+        </div>
+        <input type="range" id="s2-y" min="-6.28" max="6.28" step="0.0001" value="0"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">λ — freq multiplier</span>
+          <input class="num-input c2i" id="n2-lam" value="4" step="0.01"/>
+        </div>
+        <input type="range" id="s2-lam" min="0.5" max="20" step="0.01" value="4"/>
+      </div>
+      <div class="srow" style="margin-top:3px;padding:5px 6px 5px;background:#100805;border-radius:2px;border-left:2px solid #aa220044;">
+        <div class="srow-head">
+          <span class="srow-lbl" style="color:#882200">dλ — Zeitfluss (λ-Tick/s)</span>
+          <input class="num-input c2i" id="n2-dlam" value="0" step="0.01"/>
+        </div>
+        <input type="range" id="s2-dlam" min="0" max="6" step="0.01" value="0"/>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;">
+          <span style="font-size:8px;color:#221108">still</span>
+          <span style="font-size:8px;color:#aa4422" id="v2-lam-live">λ=4.00</span>
+          <span style="font-size:8px;color:#221108">schnell</span>
+        </div>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">ψ — reference / vanishing</span>
+          <input class="num-input c2i" id="n2-psi" value="1.5708" step="0.0001"/>
+        </div>
+        <input type="range" id="s2-psi" min="-3.14" max="3.14" step="0.0001" value="1.5708"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">δ — shape / peak spacing</span>
+          <input class="num-input c2i" id="n2-del" value="1" step="0.001"/>
+        </div>
+        <input type="range" id="s2-del" min="0.001" max="4" step="0.001" value="1"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">α — gauss width</span>
+          <input class="num-input c2i" id="n2-alp" value="0.5" step="0.001"/>
+        </div>
+        <input type="range" id="s2-alp" min="0.01" max="4" step="0.001" value="0.5"/>
+      </div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl">β — gauss scale</span>
+          <input class="num-input c2i" id="n2-bet" value="2" step="0.01"/>
+        </div>
+        <input type="range" id="s2-bet" min="0.1" max="8" step="0.01" value="2"/>
+      </div>
+
+      <div class="sep"></div>
+      <div class="srow">
+        <div class="srow-head">
+          <span class="srow-lbl" style="color:#1a2a2a">SPEED</span>
+          <span class="srow-val" style="color:#2a3a3a" id="v-spd">0.70</span>
+        </div>
+        <input type="range" id="s-speed" min="0.05" max="3" step="0.05" value="0.7"/>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- overlay labels -->
+<div class="ov-lbl" id="lbl-obs" style="color:#88bbff;border:1px solid #11336622;background:rgba(0,3,14,.8)">OBS</div>
+<div class="ov-lbl" id="lbl-ref" style="color:#ff8855;border:1px solid #66110022;background:rgba(14,2,0,.8)">REF</div>
+<div class="ov-lbl" id="lbl-dist" style="color:#44ddaa;background:rgba(0,4,10,.85);font-size:9px">|Δr|=0.000</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ─── Constants ───────────────────────────────────────
+const EPS = Math.PI/3 - 1;
+const R   = 1.1;
+const D   = R;
+const c1x =  D/2;
+const c2x = -D/2;
+const scaleMin = 0.55, scaleMax = 1.40;
+const HIST = 500;
+
+// ─── State ───────────────────────────────────────────
+let SPEED = 0.7;
+
+// Per-channel envelope params
+const P = {
+  ch1: { y:0, lam:4, psi:Math.PI/2, del:1, alp:0.5, bet:2, dlam:0 },
+  ch2: { y:0, lam:4, psi:Math.PI/2, del:1, alp:0.5, bet:2, dlam:0 }
+};
+
+// ─── Envelope formula ────────────────────────────────
+function psiEnvelope(p) {
+  const phi = Math.atan2(p.y - p.psi, p.del);   // arctan((y-ψ)/δ)
+  const Theta = p.lam * phi;
+  const gauss = Math.exp(-p.alp * Math.pow((p.y - p.psi)/p.bet, 2));
+  const Rpsi  = Math.cos(Theta) * gauss;
+  return { Theta, gauss, Rpsi };
+}
+
+// ─── Three.js setup ──────────────────────────────────
+const container = document.getElementById('view3d');
+const vW = () => container.clientWidth;
+const vH = () => container.clientHeight - 180;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x00111f);
+scene.fog = new THREE.FogExp2(0x00111f, 0.028);
+
+const camera = new THREE.PerspectiveCamera(50, vW()/vH(), 0.01, 200);
+camera.position.set(2.5, 2.2, 5.8);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(vW(), vH());
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+container.insertBefore(renderer.domElement, container.firstChild);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x0f1e30, 1.4));
+const lCh1 = new THREE.PointLight(0x2255ff, 3, 14); lCh1.position.set(-1,2,2); scene.add(lCh1);
+const lCh2 = new THREE.PointLight(0xff4400, 3, 14); lCh2.position.set(1,-2,2); scene.add(lCh2);
+const lKey = new THREE.PointLight(0xffffff, 0.6, 20); lKey.position.set(0,5,4); scene.add(lKey);
+
+// ── Oloid group ──
+const oloid = new THREE.Group();
+scene.add(oloid);
+
+// Torus 1 (XZ, center c1x)
+const t1mat = new THREE.MeshPhongMaterial({
+  color:0x0a2a88, emissive:0x000e33,
+  transparent:true, opacity:0.6,
+  shininess:180, specular:0x4466ff
+});
+const torus1 = new THREE.Mesh(new THREE.TorusGeometry(R, 0.048, 20, 120), t1mat);
+torus1.position.set(c1x, 0, 0);
+torus1.rotation.x = Math.PI/2;
+oloid.add(torus1);
+
+// Torus 2 (XY, center c2x)
+const t2mat = new THREE.MeshPhongMaterial({
+  color:0x881800, emissive:0x330800,
+  transparent:true, opacity:0.6,
+  shininess:180, specular:0xff6633
+});
+const torus2 = new THREE.Mesh(new THREE.TorusGeometry(R, 0.048, 20, 120), t2mat);
+torus2.position.set(c2x, 0, 0);
+oloid.add(torus2);
+
+// ── Envelope visualization on each torus ──
+// Ring of small spheres showing R_ψ(y) mapped around the torus
+const ENV_SEGS = 80;
+const envMats1 = [], envMats2 = [];
+const envSpheres1 = [], envSpheres2 = [];
+const smGeo = new THREE.SphereGeometry(0.018, 6, 6);
+
+for (let i = 0; i < ENV_SEGS; i++) {
+  const m1 = new THREE.MeshBasicMaterial({color:0x1133aa, transparent:true, opacity:0.0});
+  const m2 = new THREE.MeshBasicMaterial({color:0xaa2200, transparent:true, opacity:0.0});
+  const s1 = new THREE.Mesh(smGeo, m1);
+  const s2 = new THREE.Mesh(smGeo, m2);
+  oloid.add(s1); oloid.add(s2);
+  envSpheres1.push(s1); envMats1.push(m1);
+  envSpheres2.push(s2); envMats2.push(m2);
+}
+
+// Ruling lines
+for (let i = 0; i < 28; i++) {
+  const a = (i/28)*Math.PI*2;
+  const p1 = new THREE.Vector3(c1x + R*Math.cos(a), 0, R*Math.sin(a));
+  const p2 = new THREE.Vector3(c2x + R*Math.cos(a+1.88), R*Math.sin(a+1.88), 0);
+  oloid.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([p1, p2]),
+    new THREE.LineBasicMaterial({color:0x1a3a5a, transparent:true, opacity:0.7})
+  ));
+}
+
+// ── Observer sphere (on T1) ──
+const obsGeo = new THREE.SphereGeometry(0.085, 16, 16);
+const obsMat = new THREE.MeshPhongMaterial({
+  color:0x88ccff, emissive:0x224488,
+  shininess:200, specular:0xffffff
+});
+const obsSphere = new THREE.Mesh(obsGeo, obsMat);
+oloid.add(obsSphere);
+
+// Obs glow ring
+const obsRingMat = new THREE.MeshBasicMaterial({color:0x2255ff, transparent:true, opacity:0.4, side:THREE.DoubleSide});
+const obsRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.008, 8, 32), obsRingMat);
+oloid.add(obsRing);
+
+// ── Ref sphere (on T2) ──
+const refMat = new THREE.MeshPhongMaterial({
+  color:0xffaa88, emissive:0x441100,
+  shininess:200, specular:0xffffff
+});
+const refSphere = new THREE.Mesh(obsGeo.clone(), refMat);
+oloid.add(refSphere);
+
+const refRingMat = new THREE.MeshBasicMaterial({color:0xff3300, transparent:true, opacity:0.4, side:THREE.DoubleSide});
+const refRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.008, 8, 32), refRingMat);
+oloid.add(refRing);
+
+// ── Connecting line ──
+const connPts = [new THREE.Vector3(), new THREE.Vector3()];
+const connGeo = new THREE.BufferGeometry().setFromPoints(connPts);
+const connLine = new THREE.Line(connGeo,
+  new THREE.LineBasicMaterial({color:0x44ddaa, transparent:true, opacity:0.9})
+);
+oloid.add(connLine);
+
+// ── T-vector ──
+const Tvec = new THREE.Vector3(0.22, -0.38, 0.14).normalize();
+scene.add(new THREE.ArrowHelper(Tvec,
+  Tvec.clone().multiplyScalar(-2.2), 4.4, 0x443300, 0.3, 0.13));
+
+// ── Starfield ──
+const sg = new THREE.BufferGeometry();
+const sp = new Float32Array(1800*3);
+for (let i=0; i<sp.length; i++) sp[i]=(Math.random()-.5)*80;
+sg.setAttribute('position', new THREE.BufferAttribute(sp,3));
+scene.add(new THREE.Points(sg, new THREE.PointsMaterial({color:0x1a3a55, size:0.06})));
+
+// Grid
+scene.add(new THREE.GridHelper(8, 20, 0x0e2a44, 0x0a1f33));
+
+// ── Trails ──
+const OBS_TRAIL = 70, REF_TRAIL = 70;
+const obsPts = Array.from({length:OBS_TRAIL}, ()=>new THREE.Vector3());
+const refPts = Array.from({length:REF_TRAIL}, ()=>new THREE.Vector3());
+const obsTrailGeo = new THREE.BufferGeometry().setFromPoints(obsPts);
+const refTrailGeo = new THREE.BufferGeometry().setFromPoints(refPts);
+scene.add(new THREE.Line(obsTrailGeo, new THREE.LineBasicMaterial({color:0x1a4488, transparent:true, opacity:0.75})));
+scene.add(new THREE.Line(refTrailGeo, new THREE.LineBasicMaterial({color:0x882210, transparent:true, opacity:0.75})));
+
+// ─── Oscilloscopes ───────────────────────────────────
+const oscDist = document.getElementById('osc-dist');
+const oscComp = document.getElementById('osc-comp');
+const dCtx = oscDist.getContext('2d');
+const cCtx = oscComp.getContext('2d');
+
+const distHist=[], dxHist=[], dyHist=[], dzHist=[];
+
+function resizeOsc() {
+  const stats = document.getElementById('stats');
+  const pw = Math.floor(stats.clientWidth / 2) - 24;
+  oscDist.width = pw; oscDist.height = 138;
+  oscComp.width = pw; oscComp.height = 138;
+}
+resizeOsc();
+
+function drawOscLine(ctx, data, color, bold, mn, mx) {
+  const N = data.length;
+  if (N < 2) return;
+  const cw = ctx.canvas.width, ch = ctx.canvas.height;
+  const range = mx - mn || 0.001;
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = bold ? 1.8 : 1;
+  for (let i=0; i<N; i++) {
+    const x = cw * (i / (N-1));
+    const y = ch - ((data[i]-mn)/range)*ch*0.8 - ch*0.1;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+
+function drawGrid(ctx) {
+  const cw=ctx.canvas.width, ch=ctx.canvas.height;
+  ctx.strokeStyle='#0d2840'; ctx.lineWidth=1;
+  for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,ch*i/4);ctx.lineTo(cw,ch*i/4);ctx.stroke();}
+  for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(cw*i/8,0);ctx.lineTo(cw*i/8,ch);ctx.stroke();}
+}
+
+function drawOscs() {
+  const N = Math.min(distHist.length, oscDist.width);
+  if (N < 2) return;
+
+  const ds = distHist.slice(-N), xs=dxHist.slice(-N), ys=dyHist.slice(-N), zs=dzHist.slice(-N);
+  const dmn=Math.min(...ds), dmx=Math.max(...ds);
+  const allComp=[...xs,...ys,...zs];
+  const cmn=Math.min(...allComp), cmx=Math.max(...allComp);
+
+  // Dist canvas
+  dCtx.clearRect(0,0,oscDist.width,oscDist.height);
+  dCtx.fillStyle = 'rgba(0,10,22,0.97)'; dCtx.fillRect(0,0,oscDist.width,oscDist.height);
+  drawGrid(dCtx);
+  drawOscLine(dCtx, ds, 'rgba(68,220,170,0.9)', true, dmn, dmx);
+  // dot at end
+  if(ds.length){
+    const curY = oscDist.height - ((ds[ds.length-1]-dmn)/(dmx-dmn||0.001))*oscDist.height*0.8 - oscDist.height*0.1;
+    dCtx.beginPath(); dCtx.arc(oscDist.width-1, curY, 3.5,0,Math.PI*2);
+    dCtx.fillStyle='#44ddaa'; dCtx.fill();
+  }
+  document.getElementById('dist-range').textContent =
+    `[${dmn.toFixed(3)}, ${dmx.toFixed(3)}]`;
+
+  // Comp canvas
+  cCtx.clearRect(0,0,oscComp.width,oscComp.height);
+  cCtx.fillStyle='rgba(0,10,22,0.97)'; cCtx.fillRect(0,0,oscComp.width,oscComp.height);
+  drawGrid(cCtx);
+  drawOscLine(cCtx, xs, 'rgba(68,120,255,0.6)', false, cmn, cmx);
+  drawOscLine(cCtx, ys, 'rgba(68,200,100,0.6)', false, cmn, cmx);
+  drawOscLine(cCtx, zs, 'rgba(200,160,60,0.6)',  false, cmn, cmx);
+}
+
+// ─── Slider binding ──────────────────────────────────
+function bindSliders(prefix, ch) {
+  ['y','lam','psi','del','alp','bet'].forEach(k => {
+    const sEl = document.getElementById(`s${prefix}-${k}`);
+    const nEl = document.getElementById(`n${prefix}-${k}`);
+    if (!sEl) return;
+
+    sEl.addEventListener('input', () => {
+      const v = parseFloat(sEl.value);
+      ch[k] = v;
+      if (nEl) nEl.value = v;
+      if (k==='lam') {
+        const live = document.getElementById(`v${prefix}-lam-live`);
+        if (live) live.textContent = `λ=${v.toFixed(2)}`;
+      }
+      distHist.length=0; dxHist.length=0; dyHist.length=0; dzHist.length=0;
+    });
+
+    if (nEl) {
+      function applyText() {
+        let v = parseFloat(nEl.value);
+        if (isNaN(v)) return;
+        v = Math.max(parseFloat(sEl.min), Math.min(parseFloat(sEl.max), v));
+        ch[k] = v; sEl.value = v; nEl.value = v;
+        if (k==='lam') {
+          const live = document.getElementById(`v${prefix}-lam-live`);
+          if (live) live.textContent = `λ=${v.toFixed(2)}`;
+        }
+        distHist.length=0; dxHist.length=0; dyHist.length=0; dzHist.length=0;
+      }
+      nEl.addEventListener('change', applyText);
+      nEl.addEventListener('keydown', e => { if (e.key==='Enter') { applyText(); nEl.blur(); }});
+    }
+  });
+
+  // dλ — slider + text input
+  const dSEl = document.getElementById(`s${prefix}-dlam`);
+  const dNEl = document.getElementById(`n${prefix}-dlam`);
+  if (dSEl) dSEl.addEventListener('input', () => {
+    ch.dlam = parseFloat(dSEl.value);
+    if (dNEl) dNEl.value = ch.dlam.toFixed(2);
+  });
+  if (dNEl) {
+    function applyDlam() {
+      let v = parseFloat(dNEl.value);
+      if (isNaN(v)) return;
+      v = Math.max(0, Math.min(6, v));
+      ch.dlam = v; if (dSEl) dSEl.value = v; dNEl.value = v;
+    }
+    dNEl.addEventListener('change', applyDlam);
+    dNEl.addEventListener('keydown', e => { if (e.key==='Enter') { applyDlam(); dNEl.blur(); }});
+  }
+}
+bindSliders('1', P.ch1);
+bindSliders('2', P.ch2);
+
+document.getElementById('s-speed').addEventListener('input', e=>{
+  SPEED = parseFloat(e.target.value);
+  document.getElementById('v-spd').textContent = SPEED.toFixed(2);
+});
+
+// ─── Position helpers ────────────────────────────────
+function getObsPos(s1, env1) {
+  // Θ = λ·arctan((y-ψ)/δ) → angle on T1 (XZ plane)
+  const angle = env1.Theta;
+  return new THREE.Vector3(c1x + R*s1*Math.cos(angle), 0, R*s1*Math.sin(angle));
+}
+
+function getRefPos(s2, env2) {
+  // Θ → angle on T2 (XY plane)
+  const angle = env2.Theta;
+  return new THREE.Vector3(c2x + R*s2*Math.cos(angle), R*s2*Math.sin(angle), 0);
+}
+
+// ─── Update envelope visualization rings ─────────────
+function updateEnvRing(spheres, mats, s, pCh, isT1) {
+  for (let i=0; i<ENV_SEGS; i++) {
+    const a  = (i/ENV_SEGS)*Math.PI*2;
+    const yv = a; // map angle → y for display
+    const pp = { y:yv, lam:pCh.lam, psi:pCh.psi, del:pCh.del, alp:pCh.alp, bet:pCh.bet };
+    const ev = psiEnvelope(pp);
+    const opacity = Math.max(0, (ev.Rpsi + 1) / 2) * 0.75;
+    // size scale
+    const sc = 0.4 + Math.max(0, ev.Rpsi) * 1.8;
+    spheres[i].scale.setScalar(sc);
+    mats[i].opacity = opacity;
+    if (isT1) {
+      spheres[i].position.set(c1x + R*s*Math.cos(a), 0, R*s*Math.sin(a));
+    } else {
+      spheres[i].position.set(c2x + R*s*Math.cos(a), R*s*Math.sin(a), 0);
+    }
+  }
+}
+
+// ─── Project to screen ───────────────────────────────
+function toScreen(v3) {
+  const rect = container.getBoundingClientRect();
+  const v = v3.clone().project(camera);
+  return {
+    x: rect.left + (v.x+1)/2*rect.width,
+    y: rect.top  + (1-v.y)/2*(rect.height-180)
+  };
+}
+
+// ─── Recording ───────────────────────────────────────
+let isRecording = false;
+let recBuffer   = [];   // array of row objects
+let recInterval = null;
+let recHz       = 10;
+let recTick     = 0;
+
+// Current state snapshot (updated every animate frame)
+let snap = {};
+
+const recBtn    = document.getElementById('rec-btn');
+const exportBtn = document.getElementById('export-btn');
+const recDot    = document.getElementById('rec-dot');
+const recStatus = document.getElementById('rec-status');
+const recRateEl = document.getElementById('rec-rate');
+
+recRateEl.addEventListener('change', ()=>{
+  recHz = Math.max(1, Math.min(60, parseInt(recRateEl.value)||10));
+  recRateEl.value = recHz;
+  if (isRecording) restartInterval();
+});
+
+function restartInterval() {
+  if (recInterval) clearInterval(recInterval);
+  recInterval = setInterval(sampleFrame, 1000/recHz);
+}
+
+function sampleFrame() {
+  if (!isRecording) return;
+  recTick++;
+  recBuffer.push({
+    tick:       recTick,
+    t_sec:      (recTick/recHz).toFixed(4),
+    // CH1 params
+    c1_y:       P.ch1.y,
+    c1_lambda:  P.ch1.lam,
+    c1_dlam:    P.ch1.dlam,
+    c1_psi:     P.ch1.psi,
+    c1_delta:   P.ch1.del,
+    c1_alpha:   P.ch1.alp,
+    c1_beta:    P.ch1.bet,
+    // CH2 params
+    c2_y:       P.ch2.y,
+    c2_lambda:  P.ch2.lam,
+    c2_dlam:    P.ch2.dlam,
+    c2_psi:     P.ch2.psi,
+    c2_delta:   P.ch2.del,
+    c2_alpha:   P.ch2.alp,
+    c2_beta:    P.ch2.bet,
+    // Envelope outputs
+    env1_Theta: snap.env1 ? +snap.env1.Theta.toFixed(6)  : 0,
+    env1_Rpsi:  snap.env1 ? +snap.env1.Rpsi.toFixed(6)   : 0,
+    env1_gauss: snap.env1 ? +snap.env1.gauss.toFixed(6)  : 0,
+    env2_Theta: snap.env2 ? +snap.env2.Theta.toFixed(6)  : 0,
+    env2_Rpsi:  snap.env2 ? +snap.env2.Rpsi.toFixed(6)   : 0,
+    env2_gauss: snap.env2 ? +snap.env2.gauss.toFixed(6)  : 0,
+    // World coordinates
+    obs_x:      snap.obsW ? +snap.obsW.x.toFixed(6)      : 0,
+    obs_y:      snap.obsW ? +snap.obsW.y.toFixed(6)      : 0,
+    obs_z:      snap.obsW ? +snap.obsW.z.toFixed(6)      : 0,
+    ref_x:      snap.refW ? +snap.refW.x.toFixed(6)      : 0,
+    ref_y:      snap.refW ? +snap.refW.y.toFixed(6)      : 0,
+    ref_z:      snap.refW ? +snap.refW.z.toFixed(6)      : 0,
+    // Relative vector
+    delta_x:    snap.delta ? +snap.delta.x.toFixed(6)    : 0,
+    delta_y:    snap.delta ? +snap.delta.y.toFixed(6)    : 0,
+    delta_z:    snap.delta ? +snap.delta.z.toFixed(6)    : 0,
+    dist_abs:   snap.dist  ? +snap.dist.toFixed(6)       : 0,
+    // Phase
+    phase:      snap.phase ? +snap.phase.toFixed(6)      : 0,
+    P1:         snap.P1    ? +snap.P1.toFixed(6)         : 0,
+    P2:         snap.P2    ? +snap.P2.toFixed(6)         : 0,
+  });
+  recStatus.textContent = `● ${recBuffer.length} samples`;
+}
+
+recBtn.addEventListener('click', ()=>{
+  if (!isRecording) {
+    // Start
+    isRecording = true;
+    recBuffer   = [];
+    recTick     = 0;
+    recHz = Math.max(1, Math.min(60, parseInt(recRateEl.value)||10));
+    recBtn.textContent  = '■ Stop';
+    recBtn.className    = 'recording';
+    recDot.className    = 'on';
+    exportBtn.className = '';
+    recStatus.textContent = '● 0 samples';
+    restartInterval();
+  } else {
+    // Stop
+    isRecording = false;
+    if (recInterval) clearInterval(recInterval);
+    recBtn.textContent  = '● Record';
+    recBtn.className    = 'done';
+    recDot.className    = '';
+    recStatus.textContent = `✓ ${recBuffer.length} samples`;
+    if (recBuffer.length > 0) exportBtn.className = 'ready';
+  }
+});
+
+exportBtn.addEventListener('click', ()=>{
+  if (!recBuffer.length) return;
+
+  const COLS = [
+    { key:'tick',       label:'Tick #' },
+    { key:'t_sec',      label:'t (s)' },
+    // separator col
+    { key:'_sep1',      label:'— CH1 Parameter —' },
+    { key:'c1_y',       label:'C1 · y' },
+    { key:'c1_lambda',  label:'C1 · λ (live)' },
+    { key:'c1_dlam',    label:'C1 · dλ' },
+    { key:'c1_psi',     label:'C1 · ψ' },
+    { key:'c1_delta',   label:'C1 · δ' },
+    { key:'c1_alpha',   label:'C1 · α' },
+    { key:'c1_beta',    label:'C1 · β' },
+    { key:'_sep2',      label:'— CH2 Parameter —' },
+    { key:'c2_y',       label:'C2 · y' },
+    { key:'c2_lambda',  label:'C2 · λ (live)' },
+    { key:'c2_dlam',    label:'C2 · dλ' },
+    { key:'c2_psi',     label:'C2 · ψ' },
+    { key:'c2_delta',   label:'C2 · δ' },
+    { key:'c2_alpha',   label:'C2 · α' },
+    { key:'c2_beta',    label:'C2 · β' },
+    { key:'_sep3',      label:'— Envelope Output —' },
+    { key:'env1_Theta', label:'C1 · Θ' },
+    { key:'env1_Rpsi',  label:'C1 · R_ψ(y)' },
+    { key:'env1_gauss', label:'C1 · gauss' },
+    { key:'env2_Theta', label:'C2 · Θ' },
+    { key:'env2_Rpsi',  label:'C2 · R_ψ(y)' },
+    { key:'env2_gauss', label:'C2 · gauss' },
+    { key:'_sep4',      label:'— Koordinaten —' },
+    { key:'obs_x',      label:'OBS · x' },
+    { key:'obs_y',      label:'OBS · y' },
+    { key:'obs_z',      label:'OBS · z' },
+    { key:'ref_x',      label:'REF · x' },
+    { key:'ref_y',      label:'REF · y' },
+    { key:'ref_z',      label:'REF · z' },
+    { key:'_sep5',      label:'— Relativvektor —' },
+    { key:'delta_x',    label:'Δx' },
+    { key:'delta_y',    label:'Δy' },
+    { key:'delta_z',    label:'Δz' },
+    { key:'dist_abs',   label:'|Δr| absolut' },
+    { key:'_sep6',      label:'— Phase —' },
+    { key:'phase',      label:'φ (rad)' },
+    { key:'P1',         label:'P₁' },
+    { key:'P2',         label:'P₂' },
+  ];
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Data sheet ──
+  const headers = COLS.map(c=>c.label);
+  const rows = recBuffer.map(r =>
+    COLS.map(c => c.key.startsWith('_sep') ? '' : (r[c.key] ?? ''))
+  );
+  const wsData = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  // Column widths
+  wsData['!cols'] = COLS.map(c => ({wch: c.key.startsWith('_sep') ? 22 : 14}));
+
+  // Header row style — XLSX.utils doesn't support rich styles in free tier,
+  // but we can freeze row 1
+  wsData['!freeze'] = {xSplit:0, ySplit:1};
+
+  XLSX.utils.book_append_sheet(wb, wsData, 'Messung');
+
+  // ── Meta sheet ──
+  const metaRows = [
+    ['Ψ-Oloid Messung', ''],
+    ['Zeitstempel', new Date().toISOString()],
+    ['Samples', recBuffer.length],
+    ['Abtastrate (Hz)', recHz],
+    ['Dauer (s)', (recBuffer.length/recHz).toFixed(2)],
+    ['',''],
+    ['CH1 Parameter (letzter Wert)', ''],
+    ['y',       P.ch1.y],
+    ['λ',       P.ch1.lam],
+    ['ψ',       P.ch1.psi],
+    ['δ',       P.ch1.del],
+    ['α',       P.ch1.alp],
+    ['β',       P.ch1.bet],
+    ['',''],
+    ['CH2 Parameter (letzter Wert)', ''],
+    ['y',       P.ch2.y],
+    ['λ',       P.ch2.lam],
+    ['ψ',       P.ch2.psi],
+    ['δ',       P.ch2.del],
+    ['α',       P.ch2.alp],
+    ['β',       P.ch2.bet],
+  ];
+  const wsMeta = XLSX.utils.aoa_to_sheet(metaRows);
+  wsMeta['!cols'] = [{wch:32},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, wsMeta, 'Meta');
+
+  // Download
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  XLSX.writeFile(wb, `psi_oloid_${ts}.xlsx`);
+});
+
+
+
+// ─── Animation state ─────────────────────────────────
+let clock  = 0;
+let tDrift = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  clock  += 0.016 * SPEED;
+  tDrift += 0.016 * SPEED * 0.22;
+
+  // ── λ-tick: time flows only when λ advances ──
+  const dt = 0.016 * SPEED;
+  if (P.ch1.dlam > 0) {
+    P.ch1.lam += P.ch1.dlam * dt;
+    // keep λ in reasonable range — wrap or clamp
+    if (P.ch1.lam > 60) P.ch1.lam = parseFloat(document.getElementById('s1-lam').value);
+    document.getElementById('v1-lam-live').textContent = `λ=${P.ch1.lam.toFixed(2)}`;
+  }
+  if (P.ch2.dlam > 0) {
+    P.ch2.lam += P.ch2.dlam * dt;
+    if (P.ch2.lam > 60) P.ch2.lam = parseFloat(document.getElementById('s2-lam').value);
+    document.getElementById('v2-lam-live').textContent = `λ=${P.ch2.lam.toFixed(2)}`;
+  }
+
+  const phase = clock;
+  const P1 = (1 + Math.cos(phase)) / 2;
+  const P2 = 1 - P1;
+  const s1 = scaleMin + P1*(scaleMax-scaleMin);
+  const s2 = scaleMin + P2*(scaleMax-scaleMin);
+
+  // Torus scale + emissive
+  torus1.scale.setScalar(s1);
+  torus2.scale.setScalar(s2);
+  t1mat.emissive.setRGB(0, 0.02+P1*0.08, 0.04+P1*0.2);
+  t2mat.emissive.setRGB(0.04+P2*0.2, 0.01+P2*0.04, 0);
+  lCh1.intensity = 1.2+P1*2.8; lCh2.intensity = 1.2+P2*2.8;
+
+  // Compute envelopes
+  const env1 = psiEnvelope(P.ch1);
+  const env2 = psiEnvelope(P.ch2);
+
+  // Update envelope rings
+  updateEnvRing(envSpheres1, envMats1, s1, P.ch1, true);
+  updateEnvRing(envSpheres2, envMats2, s2, P.ch2, false);
+
+  // Oloid drift along T (must be before world-coord snap)
+  oloid.position.copy(Tvec.clone().multiplyScalar(Math.sin(tDrift)*1.2));
+
+  // Obs / Ref positions
+  const obsLocal = getObsPos(s1, env1);
+  const refLocal = getRefPos(s2, env2);
+
+  // ── snap for recorder ──
+  const obsWorld = obsLocal.clone().add(oloid.position);
+  const refWorld = refLocal.clone().add(oloid.position);
+  const delta    = refLocal.clone().sub(obsLocal);
+  const dist     = delta.length();
+  snap = { env1, env2, obsW: obsWorld, refW: refWorld, delta, dist, phase, P1, P2 };
+
+  obsSphere.position.copy(obsLocal);
+  refSphere.position.copy(refLocal);
+
+  // Glow rings (face camera in their respective planes)
+  obsRing.position.copy(obsLocal);
+  refRing.position.copy(refLocal);
+  obsRing.lookAt(camera.position);
+  refRing.lookAt(camera.position);
+
+  // Scale glow by |R_ψ|
+  const obsGlowScale = 0.6 + Math.abs(env1.Rpsi) * 1.8;
+  const refGlowScale = 0.6 + Math.abs(env2.Rpsi) * 1.8;
+  obsRing.scale.setScalar(obsGlowScale);
+  refRing.scale.setScalar(refGlowScale);
+  obsRingMat.opacity = 0.15 + Math.abs(env1.Rpsi) * 0.5;
+  refRingMat.opacity = 0.15 + Math.abs(env2.Rpsi) * 0.5;
+
+  // Emissive on obs/ref by envelope value
+  obsMat.emissive.setRGB(
+    0.05 + Math.max(0,  env1.Rpsi)*0.15,
+    0.1  + Math.max(0,  env1.Rpsi)*0.3,
+    0.2  + Math.max(0,  env1.Rpsi)*0.4
+  );
+  refMat.emissive.setRGB(
+    0.2  + Math.max(0, env2.Rpsi)*0.4,
+    0.05 + Math.max(0, env2.Rpsi)*0.1,
+    0
+  );
+
+  // Connecting line
+  connPts[0].copy(obsLocal); connPts[1].copy(refLocal);
+  connGeo.setFromPoints(connPts);
+
+  // Push history
+  if (distHist.length >= HIST) { distHist.shift(); dxHist.shift(); dyHist.shift(); dzHist.shift(); }
+  distHist.push(dist); dxHist.push(delta.x); dyHist.push(delta.y); dzHist.push(delta.z);
+
+  // Trails (world space) — obsWorld/refWorld already set in snap block above
+  obsPts.shift(); obsPts.push(obsWorld);
+  refPts.shift();  refPts.push(refWorld);
+  obsTrailGeo.setFromPoints(obsPts);
+  refTrailGeo.setFromPoints(refPts);
+
+  // Camera orbit
+  camera.position.x = Math.sin(clock*0.065)*5.0 + Math.sin(clock*0.027)*0.6;
+  camera.position.z = Math.cos(clock*0.065)*5.0 + Math.cos(clock*0.027)*0.6;
+  camera.position.y = 2.2 + Math.sin(clock*0.044)*0.7;
+  camera.lookAt(oloid.position);
+
+  // ── HUD ──
+  document.getElementById('e1-val').textContent   = env1.Rpsi.toFixed(4);
+  document.getElementById('e2-val').textContent   = env2.Rpsi.toFixed(4);
+  document.getElementById('e1-theta').textContent = `Θ=${env1.Theta.toFixed(3)}`;
+  document.getElementById('e2-theta').textContent = `Θ=${env2.Theta.toFixed(3)}`;
+  document.getElementById('e1-bar').style.width   = ((env1.Rpsi+1)/2*100).toFixed(1)+'%';
+  document.getElementById('e2-bar').style.width   = ((env2.Rpsi+1)/2*100).toFixed(1)+'%';
+
+  // Overlay labels
+  const sp1 = toScreen(obsWorld);
+  const sp2 = toScreen(refWorld);
+  const mid2D = {
+    x: (sp1.x+sp2.x)/2,
+    y: (sp1.y+sp2.y)/2
+  };
+  const lo = document.getElementById('lbl-obs');
+  const lr = document.getElementById('lbl-ref');
+  const ld = document.getElementById('lbl-dist');
+  lo.style.left=(sp1.x+10)+'px'; lo.style.top=(sp1.y-8)+'px';
+  lr.style.left=(sp2.x+10)+'px'; lr.style.top=(sp2.y-8)+'px';
+  ld.style.left=(mid2D.x-20)+'px'; ld.style.top=(mid2D.y-16)+'px';
+  ld.textContent = `|Δr|=${dist.toFixed(3)}`;
+
+  drawOscs();
+  renderer.render(scene, camera);
+}
+
+// Resize
+window.addEventListener('resize', ()=>{
+  camera.aspect = vW()/vH();
+  camera.updateProjectionMatrix();
+  renderer.setSize(vW(), vH());
+  resizeOsc();
+});
+
+animate();
+</script>
+</body>
+</html>

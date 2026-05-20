@@ -1,0 +1,2835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AXIOM · Verifiable GPU Analytics · Billing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg0:#050810;--bg1:#090d1a;--bg2:#0d1222;--bg3:#111828;--bg4:#1a2235;
+  --line:#1e2d42;--line2:#253449;
+  --td:#4a6080;--tm:#7a9ab8;--t:#b8d0e8;--th:#ddeeff;--w:#f0f8ff;
+  --teal:#00e5c8;--td2:#00b89f;--tg:rgba(0,229,200,.08);
+  --amber:#f5a623;--red:#ff4757;--green:#2ecc71;--purple:#9b59b6;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--disp:'Syne',sans-serif;
+  --r:3px;--rl:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{background:var(--bg0);color:var(--t);font-family:var(--sans);min-height:100vh;overflow-x:hidden;
+  background-image:radial-gradient(ellipse 60% 40% at 70% 0%,rgba(0,229,200,.04) 0%,transparent 70%),
+  radial-gradient(ellipse 40% 60% at 0% 80%,rgba(0,100,200,.05) 0%,transparent 70%)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.shell{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-height:100vh;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:22px 20px 18px;border-bottom:1px solid var(--line)}
+.logo-mark{font-family:var(--disp);font-weight:800;font-size:1.3rem;color:var(--w);letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);flex-shrink:0}
+.logo-sub{font-family:var(--mono);font-size:.6rem;color:var(--td);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.nav-sec{font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--td);padding:16px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 20px;cursor:pointer;transition:all .15s;color:var(--tm);font-size:.8rem;font-weight:500;position:relative;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{color:var(--th);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--teal);background:var(--tg)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--teal)}
+.nav-ico{width:15px;height:15px;opacity:.7;flex-shrink:0}
+.nav-item.active .nav-ico{opacity:1}
+.nav-badge{margin-left:auto;font-family:var(--mono);font-size:.58rem;background:rgba(0,229,200,.15);color:var(--teal);padding:2px 6px;border-radius:10px}
+.sb-foot{margin-top:auto;padding:14px 20px;border-top:1px solid var(--line)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1a4a6e,#00b89f);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.62rem;color:var(--w);font-weight:600;flex-shrink:0}
+.user-name{font-size:.73rem;font-weight:600;color:var(--th);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-family:var(--mono);font-size:.58rem;color:var(--td)}
+
+/* TOPBAR */
+.topbar{border-bottom:1px solid var(--line);padding:0 28px;height:50px;display:flex;align-items:center;justify-content:space-between;background:var(--bg1);position:sticky;top:0;z-index:100}
+.breadcrumb{font-family:var(--mono);font-size:.68rem;color:var(--td);display:flex;align-items:center;gap:8px}
+.bc-cur{color:var(--th)}
+.status-pill{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.6rem;color:var(--tm);background:var(--bg2);border:1px solid var(--line);padding:4px 10px;border-radius:100px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 4px var(--green)}50%{opacity:.5;box-shadow:none}}
+.livepulse{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:lp 1.5s ease-in-out infinite;flex-shrink:0}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* LAYOUT */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.page{padding:28px;display:none;flex-direction:column;gap:22px}
+.page.active{display:flex}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page > *{animation:fi .3s ease both}
+.page > *:nth-child(2){animation-delay:.05s}
+.page > *:nth-child(3){animation-delay:.1s}
+.page > *:nth-child(4){animation-delay:.15s}
+.page > *:nth-child(5){animation-delay:.2s}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--rl)}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-title{font-family:var(--mono);font-size:.65rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--tm)}
+.card-bd{padding:18px}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sc{background:var(--bg2);border:1px solid var(--line);border-radius:var(--rl);padding:14px 16px}
+.sc-lbl{font-family:var(--mono);font-size:.58rem;color:var(--td);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.sc-val{font-family:var(--disp);font-size:1.35rem;font-weight:700;color:var(--w);line-height:1}
+.sc-sub{font-family:var(--mono);font-size:.6rem;color:var(--green);margin-top:3px}
+.sc-sub.warn{color:var(--amber)}
+
+/* STEP FLOW */
+.step-flow{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden}
+.step{padding:12px 16px;border-right:1px solid var(--line);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s;position:relative}
+.step:last-child{border-right:none}
+.step.done{background:rgba(0,229,200,.03)}
+.step.active{background:rgba(0,229,200,.07)}
+.step.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--teal)}
+.step-n{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.62rem;font-weight:600;color:var(--td);flex-shrink:0}
+.step.done .step-n{border-color:var(--teal);background:rgba(0,229,200,.12);color:var(--teal)}
+.step.active .step-n{border-color:var(--teal);color:var(--teal);box-shadow:0 0 8px rgba(0,229,200,.3)}
+.step-lbl{font-size:.76rem;font-weight:500;color:var(--tm)}
+.step.active .step-lbl{color:var(--th)}
+.step.done .step-lbl{color:var(--td2)}
+.step-sub{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:2px}
+
+/* GRID HELPERS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g13{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+.col{display:flex;flex-direction:column;gap:14px}
+
+/* PROFILE CARDS */
+.profiles{display:flex;flex-direction:column;gap:8px}
+.pc{border:1.5px solid var(--line2);border-radius:var(--rl);padding:14px 16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.pc:hover{border-color:var(--tm)}
+.pc.sel{border-color:var(--teal);background:rgba(0,229,200,.04);box-shadow:0 0 0 1px rgba(0,229,200,.25)}
+.pc-badge{font-family:var(--mono);font-size:.58rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
+.quick .pc-badge{color:var(--amber)}.standard .pc-badge{color:var(--teal)}.precise .pc-badge{color:var(--purple)}
+.pc-name{font-family:var(--disp);font-size:.95rem;font-weight:700;color:var(--w);margin-bottom:3px}
+.pc-price{font-family:var(--mono);font-size:.68rem;color:var(--tm);margin-bottom:8px}
+.pc-price strong{color:var(--w);font-size:1rem}
+.pc-spec{font-family:var(--mono);font-size:.6rem;color:var(--td);line-height:1.7}
+.pc-spec span{color:var(--tm)}
+.pc-check{position:absolute;top:12px;right:12px;width:16px;height:16px;border-radius:50%;background:var(--teal);display:none;align-items:center;justify-content:center}
+.pc.sel .pc-check{display:flex}
+
+/* ESTIMATE */
+.est{background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.est-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.68rem}
+.est-row:last-child{border-bottom:none}
+.est-row .lbl{color:var(--tm)}.est-row .val{color:var(--th)}
+.est-row.tot .lbl{color:var(--t);font-weight:600}.est-row.tot .val{color:var(--teal);font-size:.95rem;font-weight:700}
+.est-row.cap .val{color:var(--amber)}
+.cap-note{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:8px;padding-top:8px;border-top:1px solid var(--line);line-height:1.6}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--line2);border-radius:var(--rl);padding:28px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:var(--td2);background:var(--tg)}
+.upload-title{font-size:.82rem;font-weight:600;color:var(--th);margin-bottom:3px}
+.upload-sub{font-family:var(--mono);font-size:.6rem;color:var(--td)}
+.upload-sub strong{color:var(--teal)}
+.file-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);margin-top:8px}
+.fi-icon{width:30px;height:30px;background:rgba(0,229,200,.1);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fi-name{font-size:.76rem;font-weight:500;color:var(--th)}
+.fi-meta{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:1px}
+.fi-ok{margin-left:auto;font-family:var(--mono);font-size:.58rem;color:var(--green);display:flex;align-items:center;gap:4px}
+
+/* PARAMS */
+.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.param-item label{display:block;font-family:var(--mono);font-size:.6rem;color:var(--td);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.pi{width:100%;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);padding:8px 11px;color:var(--th);font-family:var(--mono);font-size:.78rem;transition:border-color .15s;outline:none;appearance:none}
+.pi:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,229,200,.1)}
+.pi::placeholder{color:var(--td)}
+.adv-toggle{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:.63rem;color:var(--teal);cursor:pointer;margin-top:10px;padding:6px 0;background:none;border:none;width:100%}
+.adv-arrow{transition:transform .2s}
+.adv-toggle.open .adv-arrow{transform:rotate(90deg)}
+
+/* BUTTONS */
+.cta{width:100%;padding:13px;border-radius:var(--r);border:none;background:var(--teal);color:var(--bg0);font-family:var(--disp);font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.03em;transition:all .2s;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+.cta:hover{background:#00f0d5;box-shadow:0 4px 20px rgba(0,229,200,.3);transform:translateY(-1px)}
+.outline-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;background:rgba(0,229,200,.06);border:1.5px solid rgba(0,229,200,.25);border-radius:var(--r);color:var(--teal);font-family:var(--mono);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
+.outline-btn:hover{background:rgba(0,229,200,.12);border-color:var(--teal);box-shadow:0 0 16px rgba(0,229,200,.12)}
+.icon-btn{width:28px;height:28px;border:1px solid var(--line2);border-radius:var(--r);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--td)}
+.icon-btn:hover{border-color:var(--teal);color:var(--teal)}
+.export-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line2);border-radius:var(--r);background:var(--bg3);font-family:var(--mono);font-size:.63rem;color:var(--tm);cursor:pointer;transition:all .15s}
+.export-btn:hover{border-color:var(--teal);color:var(--teal)}
+.pay-security{text-align:center;font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:5px}
+
+/* PAYMENT */
+.pay-methods{display:flex;gap:7px;margin-bottom:14px}
+.pay-btn{flex:1;padding:10px 6px;border-radius:var(--r);border:1.5px solid var(--line2);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-size:.72rem;font-weight:600;color:var(--tm);transition:all .15s}
+.pay-btn:hover{border-color:var(--tm);color:var(--th)}
+.pay-btn.sel{border-color:var(--teal);background:rgba(0,229,200,.05);color:var(--teal)}
+.card-form{display:flex;flex-direction:column;gap:9px}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.fl label{display:block;font-family:var(--mono);font-size:.58rem;color:var(--td);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.fi2{width:100%;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);padding:9px 11px;color:var(--th);font-family:var(--mono);font-size:.78rem;outline:none;transition:border-color .15s}
+.fi2:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,229,200,.1)}
+.fi2::placeholder{color:var(--td)}
+.inv-tog{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg3);cursor:pointer;margin-top:8px}
+.inv-tog input{accent-color:var(--teal);width:13px;height:13px;margin-top:2px;flex-shrink:0}
+.itl{font-size:.74rem;color:var(--tm)}.itl strong{color:var(--th)}
+.tax-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
+
+/* STATUS CHIPS */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:100px;font-family:var(--mono);font-size:.58rem;font-weight:600}
+.chip.run{background:rgba(0,229,200,.1);color:var(--teal)}
+.chip.queued{background:rgba(245,166,35,.1);color:var(--amber)}
+.chip.done{background:rgba(46,204,113,.1);color:var(--green)}
+.chip.fail{background:rgba(255,71,87,.1);color:var(--red)}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:.58rem;background:var(--bg4);color:var(--td);border:1px solid var(--line)}
+.tag.t{background:rgba(0,229,200,.08);color:var(--teal);border-color:transparent}
+.tag.a{background:rgba(245,166,35,.08);color:var(--amber);border-color:transparent}
+.tag.p{background:rgba(155,89,182,.08);color:var(--purple);border-color:transparent}
+
+/* JOBS TABLE */
+.jt{width:100%;border-collapse:collapse}
+.jt th{font-family:var(--mono);font-size:.58rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--td);padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.jt td{padding:12px 14px;font-size:.74rem;border-bottom:1px solid var(--line);vertical-align:middle}
+.jt tr:last-child td{border-bottom:none}
+.jt tr:hover td{background:rgba(255,255,255,.012)}
+.job-id{font-family:var(--mono);font-size:.65rem;color:var(--teal)}
+.job-nm{font-weight:500;color:var(--th)}
+.job-sub{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:1px}
+.pb{width:100px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.pbf{height:100%;border-radius:2px;background:var(--teal);transition:width .5s}
+.pbf.g{background:var(--green)}
+.ag{display:flex;gap:5px}
+
+/* SPOTLIGHT */
+.spot{border:1px solid var(--line);border-radius:var(--rl);overflow:hidden}
+.spot-hd{background:var(--bg3);border-bottom:1px solid var(--line);padding:13px 18px;display:flex;align-items:center;gap:10px}
+.spot-title{font-size:.8rem;font-weight:600;color:var(--w)}
+.spot-id{font-family:var(--mono);font-size:.6rem;color:var(--td2);margin-top:1px}
+.spot-bd{padding:18px;display:grid;grid-template-columns:1fr 240px;gap:18px}
+
+/* TIMELINE */
+.tl{display:flex;flex-direction:column}
+.tl-step{display:flex;gap:12px;position:relative}
+.tl-step::before{content:'';position:absolute;left:11px;top:24px;bottom:-1px;width:1px;background:var(--line)}
+.tl-step:last-child::before{display:none}
+.tl-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1;font-family:var(--mono);font-size:.58rem;font-weight:600}
+.tl-dot.d{background:rgba(46,204,113,.15);color:var(--green);border:1.5px solid var(--green)}
+.tl-dot.a{background:rgba(0,229,200,.12);color:var(--teal);border:1.5px solid var(--teal);animation:lp 1.5s ease-in-out infinite}
+.tl-dot.p{background:var(--bg4);color:var(--td);border:1.5px solid var(--line)}
+.tl-dot.f{background:rgba(255,98,98,.14);color:var(--red);border:1.5px solid var(--red)}
+.tl-info{padding:2px 0 16px}
+.tl-lbl{font-size:.74rem;font-weight:500;color:var(--th)}
+.tl-dot.p + .tl-info .tl-lbl{color:var(--td)}
+.tl-t{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:1px}
+.tl-note{font-family:var(--mono);font-size:.58rem;color:var(--td2);margin-top:3px}
+
+/* STATS PANEL */
+.sp{display:flex;flex-direction:column;gap:8px}
+.si{background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px}
+.si-lbl{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--td);margin-bottom:3px}
+.si-val{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--w)}
+.si-sub{font-family:var(--mono);font-size:.58rem;color:var(--td);margin-top:2px}
+
+/* TRUST / PROOF */
+.trust-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ti{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rl);padding:16px}
+.ti-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.ti-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ic-t{background:rgba(0,229,200,.1);color:var(--teal)}
+.ic-g{background:rgba(46,204,113,.1);color:var(--green)}
+.ic-a{background:rgba(245,166,35,.1);color:var(--amber)}
+.ic-p{background:rgba(155,89,182,.1);color:var(--purple)}
+.ti-title{font-size:.76rem;font-weight:600;color:var(--w)}
+.ti-sub{font-family:var(--mono);font-size:.58rem;color:var(--td)}
+.grade-ltr{font-family:var(--disp);font-size:2.8rem;font-weight:800;line-height:1;color:var(--green);text-shadow:0 0 25px rgba(46,204,113,.35)}
+.grade-score{font-family:var(--mono);font-size:.68rem;color:var(--tm);padding-bottom:4px}
+.grade-score strong{color:var(--green);font-size:1rem}
+.gb-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.gb-lbl{font-family:var(--mono);font-size:.57rem;color:var(--td);width:90px;flex-shrink:0}
+.gb-track{flex:1;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.gb-fill{height:100%;border-radius:2px}
+.gb-pct{font-family:var(--mono);font-size:.57rem;color:var(--tm);width:26px;text-align:right}
+.hash-lbl{font-family:var(--mono);font-size:.57rem;color:var(--td);margin-bottom:3px;text-transform:uppercase;letter-spacing:.1em}
+.hash-blk{background:var(--bg4);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;font-family:var(--mono);font-size:.6rem;color:var(--teal);word-break:break-all;line-height:1.5;margin-bottom:7px}
+.copy-btn{font-family:var(--mono);font-size:.6rem;color:var(--teal);background:none;border:1px solid rgba(0,229,200,.25);border-radius:var(--r);padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;width:100%;justify-content:center;transition:all .15s}
+.copy-btn:hover{background:rgba(0,229,200,.08)}
+.dl-btn{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line2);border-radius:var(--r);background:var(--bg4);cursor:pointer;font-size:.7rem;color:var(--tm);margin-bottom:5px;transition:all .15s;width:100%}
+.dl-btn:hover{border-color:var(--teal);color:var(--teal)}
+.dl-nm{font-weight:500;text-align:left}
+.dl-sz{font-family:var(--mono);font-size:.57rem;color:var(--td);text-align:left}
+
+/* CONFIG SNAPSHOT */
+.cfg{background:var(--bg4);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-family:var(--mono);font-size:.66rem;color:var(--tm);line-height:1.8;margin-bottom:10px}
+.ck{color:var(--td2)}.cv{color:var(--th)}
+.cfg-immut{font-family:var(--mono);font-size:.57rem;color:var(--td);display:flex;align-items:center;gap:5px;margin-bottom:9px}
+
+/* INVOICES */
+.inv-list{display:flex;flex-direction:column}
+.inv-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.inv-item:last-child{border-bottom:none}
+.inv-num{font-family:var(--mono);font-size:.65rem;color:var(--teal);width:110px;flex-shrink:0}
+.inv-date{font-family:var(--mono);font-size:.65rem;color:var(--td);width:90px;flex-shrink:0}
+.inv-desc{font-size:.74rem;color:var(--th);flex:1}
+.inv-amt{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--w);width:80px;text-align:right;flex-shrink:0}
+.inv-paid{display:inline-flex;padding:2px 7px;border-radius:100px;font-family:var(--mono);font-size:.57rem;background:rgba(46,204,113,.1);color:var(--green)}
+.inv-draft{display:inline-flex;padding:2px 7px;border-radius:100px;font-family:var(--mono);font-size:.57rem;background:rgba(245,166,35,.1);color:var(--amber)}
+
+/* TEAM */
+.tt{width:100%;border-collapse:collapse}
+.tt th{font-family:var(--mono);font-size:.57rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--td);padding:9px 13px;text-align:left;border-bottom:1px solid var(--line)}
+.tt td{padding:11px 13px;font-size:.74rem;border-bottom:1px solid var(--line);vertical-align:middle}
+.tt tr:last-child td{border-bottom:none}
+.role{display:inline-flex;padding:3px 8px;border-radius:100px;font-family:var(--mono);font-size:.57rem;font-weight:600}
+.ra{background:rgba(155,89,182,.12);color:var(--purple)}
+.rb{background:rgba(245,166,35,.12);color:var(--amber)}
+.rd{background:rgba(0,229,200,.1);color:var(--teal)}
+.rv{background:rgba(255,255,255,.06);color:var(--tm)}
+
+/* SPEND METER */
+.spend-m{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rl);padding:16px}
+.s-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.s-lbl{font-family:var(--mono);font-size:.6rem;color:var(--td);text-transform:uppercase;letter-spacing:.1em}
+.s-val{font-family:var(--mono);font-size:.88rem;font-weight:600;color:var(--w)}
+.s-track{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.s-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--amber));width:43%;transition:width .5s}
+.s-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--td)}
+
+/* ALERTS */
+.alert{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:var(--r)}
+.al-warn{background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.22)}
+.al-err{background:rgba(255,71,87,.07);border:1px solid rgba(255,71,87,.22)}
+.al-info{background:rgba(0,229,200,.05);border:1px solid rgba(0,229,200,.18)}
+.al-txt{font-size:.74rem;color:var(--th);flex:1}.al-txt strong{font-weight:600}
+.al-cta{font-family:var(--mono);font-size:.63rem;background:none;border:1px solid rgba(245,166,35,.35);border-radius:var(--r);color:var(--amber);padding:5px 9px;cursor:pointer;transition:all .15s;flex-shrink:0;white-space:nowrap}
+.al-cta:hover{background:rgba(245,166,35,.08)}
+.al-cta-r{font-family:var(--mono);font-size:.63rem;background:none;border:1px solid rgba(255,71,87,.35);border-radius:var(--r);color:var(--red);padding:5px 9px;cursor:pointer;transition:all .15s;flex-shrink:0;white-space:nowrap}
+.al-cta-t{font-family:var(--mono);font-size:.63rem;background:none;border:1px solid rgba(0,229,200,.25);border-radius:var(--r);color:var(--teal);padding:5px 9px;cursor:pointer;transition:all .15s;flex-shrink:0;white-space:nowrap}
+
+/* SUPPORT GRID */
+.sup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sup-item{display:flex;align-items:flex-start;gap:10px;padding:13px;background:var(--bg3);border:1px solid var(--line);border-radius:var(--rl);cursor:pointer;transition:all .15s}
+.sup-item:hover{border-color:var(--tm)}
+.sup-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sup-title{font-size:.74rem;font-weight:600;color:var(--th);margin-bottom:2px}
+.sup-desc{font-family:var(--mono);font-size:.58rem;color:var(--td);line-height:1.5}
+
+.divider{height:1px;background:var(--line);margin:12px 0}
+.flex{display:flex}.gap8{gap:8px}.ml-auto{margin-left:auto}.mono{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sb-logo">
+    <div class="logo-mark"><div class="logo-dot"></div>AXIOM</div>
+    <div class="logo-sub">GPU Analytics-as-a-Service</div>
+  </div>
+  <div class="nav-sec">Compute</div>
+  <button class="nav-item" onclick="nav(this,'upload')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10v2a2 2 0 002 2h8a2 2 0 002-2v-2M8 2v8M5 5l3-3 3 3"/></svg>New Job</button>
+  <button class="nav-item active" onclick="nav(this,'jobs')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8h6M5 5h6M5 11h4"/></svg>Job Queue<span class="nav-badge">3</span></button>
+  <button class="nav-item" onclick="nav(this,'results')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l3-4 3 2 3-6"/></svg>Results &amp; Proofs</button>
+  <div class="nav-sec">Billing</div>
+  <button class="nav-item" onclick="nav(this,'checkout')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12l-1 8H3L2 4z"/><path d="M5 4V3a3 3 0 016 0v1"/></svg>Checkout</button>
+  <button class="nav-item" onclick="nav(this,'invoices')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M5.5 6h5M5.5 9h5M5.5 12h3"/></svg>Invoices &amp; Exports</button>
+  <div class="nav-sec">Organization</div>
+  <button class="nav-item" onclick="nav(this,'team')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5"/><circle cx="12.5" cy="5" r="2"/><path d="M15 12.5c0-1.93-1.34-3.5-3-3.5"/></svg>Team &amp; Roles</button>
+  <button class="nav-item" onclick="nav(this,'support')">
+    <svg class="nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5.5a2 2 0 011.86 2.72C9.59 8.86 9 9.4 9 10.5"/><circle cx="8" cy="12.5" r="0.5" fill="currentColor"/></svg>Support &amp; Recovery</button>
+  <div class="sb-foot">
+    <div class="flex gap8" style="align-items:center;">
+      <div class="avatar" id="sb-avatar">?</div>
+      <div><div class="user-name" id="sb-user-name">Not signed in</div><div class="user-role" id="sb-user-role">AUTH REQUIRED</div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="breadcrumb"><span>AXIOM</span><span style="color:var(--line2)">/</span><span class="bc-cur" id="bc">Job Queue</span></div>
+    <div class="flex gap8">
+      <div class="status-pill"><div class="pulse"></div>GPU CLUSTER NOMINAL</div>
+      <div class="status-pill mono" style="font-size:.58rem;color:var(--td)">Queue avg: <strong id="queue-avg-top" style="color:var(--t)">~4 min</strong></div>
+      <div class="status-pill mono" id="auth-pill" style="font-size:.58rem;color:var(--td)">Not signed in</div>
+      <button class="outline-btn" id="btn-auth-register" style="width:auto;padding:5px 10px;font-size:.6rem">Register</button>
+      <button class="outline-btn" id="btn-auth-login" style="width:auto;padding:5px 10px;font-size:.6rem">Log In</button>
+      <button class="outline-btn" id="btn-auth-forgot" style="width:auto;padding:5px 10px;font-size:.6rem">Forgot PW</button>
+      <button class="outline-btn" id="btn-auth-logout" style="display:none;width:auto;padding:5px 10px;font-size:.6rem">Log Out</button>
+    </div>
+  </div>
+
+  <!-- PAGE: JOB QUEUE -->
+  <div id="p-jobs" class="page active">
+    <div class="stats-row">
+      <div class="sc"><div class="sc-lbl">This Month</div><div class="sc-val" id="kpi-month-spend">$2,184</div><div class="sc-sub" id="kpi-month-spend-sub">&#x2191; +12% vs last month</div></div>
+      <div class="sc"><div class="sc-lbl">Jobs Completed</div><div class="sc-val" id="kpi-jobs-completed">147</div><div class="sc-sub" id="kpi-jobs-completed-sub">&#x2191; +8 this week</div></div>
+      <div class="sc"><div class="sc-lbl">In Queue</div><div class="sc-val" id="kpi-jobs-queued">3</div><div class="sc-sub" id="kpi-jobs-queued-sub" style="color:var(--teal)">1 running now</div></div>
+      <div class="sc"><div class="sc-lbl">Reliability (30d)</div><div class="sc-val" id="kpi-reliability">99.2%</div><div class="sc-sub" id="kpi-reliability-sub">Grade A · All verified</div></div>
+    </div>
+
+    <!-- LIVE SPOTLIGHT -->
+    <div class="spot">
+      <div class="spot-hd">
+        <div class="livepulse"></div>
+        <div style="flex:1"><div class="spot-title" id="spot-title">sigma_scan_batch_029 · RUNNING</div><div class="spot-id" id="spot-id">JOB-2024-03-15-029 · Standard Profile · 18,400 toys</div></div>
+        <div class="flex gap8">
+          <div class="icon-btn" title="Copy ID"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="8" height="9" rx="1"/><path d="M3 1h8a1 1 0 011 1v9"/></svg></div>
+          <div id="spot-cancel-btn" class="icon-btn" title="Cancel" style="color:rgba(255,71,87,.5);border-color:rgba(255,71,87,.2)"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l7 7M10 3L3 10"/></svg></div>
+        </div>
+      </div>
+      <div class="spot-bd">
+        <div class="tl" id="spot-timeline"></div>
+        <div class="sp">
+          <div class="si"><div class="si-lbl">Progress</div><div style="margin:6px 0 3px"><div class="pb" style="width:100%;height:6px;"><div class="pbf" id="spot-progress" style="width:0%"></div></div></div><div class="si-sub" id="spot-progress-sub">n/a</div></div>
+          <div class="si"><div class="si-lbl">ETA</div><div class="si-val" id="spot-eta">—</div><div class="si-sub" id="spot-eta-sub">n/a</div></div>
+          <div class="si"><div class="si-lbl">GPU Utilization</div><div class="si-val" id="spot-gpu">n/a</div><div class="si-sub" id="spot-gpu-sub">No GPU telemetry yet</div></div>
+          <div class="si"><div class="si-lbl">Kernel Runtime</div><div class="si-val" id="spot-kernel-runtime">n/a</div><div class="si-sub" id="spot-kernel-runtime-sub">No kernel timing telemetry yet</div></div>
+          <div class="si"><div class="si-lbl">Cost Accrued</div><div class="si-val" id="spot-cost" style="color:var(--amber)">$0.00</div><div class="si-sub" id="spot-cost-sub">n/a</div></div>
+        </div>
+        <div id="spot-event-inspector" class="mono" style="margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg3);padding:10px;font-size:.58rem;color:var(--td)">
+          Timeline mapper: waiting for spotlight job.
+        </div>
+      </div>
+    </div>
+
+    <!-- JOBS TABLE -->
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-title">All Jobs</span>
+        <div class="flex gap8">
+          <select class="pi" style="padding:5px 10px;font-size:.65rem;width:auto"><option>All profiles</option><option>Quick</option><option>Standard</option><option>Precise</option></select>
+          <button class="outline-btn" style="width:auto;padding:5px 12px;font-size:.62rem" onclick="nav(null,'upload')">+ New Job</button>
+        </div>
+      </div>
+      <table class="jt">
+        <thead><tr><th>Job ID</th><th>Created (UTC)</th><th>Name / Dataset</th><th>Profile</th><th>Status</th><th>Progress</th><th>ETA</th><th>Cost</th><th>Actions</th></tr></thead>
+        <tbody id="jobs-table-body">
+          <tr><td><div class="job-id">JOB-029</div></td><td><div class="job-nm">sigma_scan_batch_029</div><div class="job-sub">sigma_029.hdf5 · 18,400 toys</div></td><td><span class="tag t">Standard</span></td><td><span class="chip run"><div class="livepulse" style="width:5px;height:5px;"></div>Running</span></td><td><div class="pb"><div class="pbf" style="width:61%"></div></div><div style="font-family:var(--mono);font-size:.56rem;color:var(--td);margin-top:2px">61%</div></td><td class="mono" style="font-size:.68rem;color:var(--tm)">~5 min</td><td class="mono" style="font-size:.7rem">$92.00</td><td><div class="ag"><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 4h10M1.5 7h6M1.5 10h8"/></svg></div></div></td></tr>
+          <tr><td><div class="job-id">JOB-028</div></td><td><div class="job-nm">higgs_search_q28</div><div class="job-sub">higgs_q28.parquet · 4,200 toys</div></td><td><span class="tag a">Quick</span></td><td><span class="chip queued">&#9203; Queued</span></td><td><div class="mono" style="font-size:.65rem;color:var(--td)">Position #2</div></td><td class="mono" style="font-size:.68rem;color:var(--tm)">~9 min</td><td class="mono" style="font-size:.7rem">$14.70</td><td><div class="ag"><div class="icon-btn" style="color:rgba(255,71,87,.4)"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l7 7M10 3L3 10"/></svg></div></div></td></tr>
+          <tr><td><div class="job-id">JOB-027</div></td><td><div class="job-nm">gravitational_lensing_p</div><div class="job-sub">grav_lens_050k.npy · 50,000 toys</div></td><td><span class="tag p">Precise</span></td><td><span class="chip queued">&#9203; Queued</span></td><td><div class="mono" style="font-size:.65rem;color:var(--td)">Position #3</div></td><td class="mono" style="font-size:.68rem;color:var(--tm)">~22 min</td><td class="mono" style="font-size:.7rem">$375.00</td><td><div class="ag"><div class="icon-btn" style="color:rgba(255,71,87,.4)"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l7 7M10 3L3 10"/></svg></div></div></td></tr>
+          <tr><td><div class="job-id">JOB-026</div></td><td><div class="job-nm">sigma_scan_batch_026</div><div class="job-sub">sigma_026.hdf5 · 18,400 toys</div></td><td><span class="tag t">Standard</span></td><td><span class="chip done">&#10003; Complete</span></td><td><div class="pb"><div class="pbf g" style="width:100%"></div></div></td><td class="mono" style="font-size:.65rem;color:var(--td)">2h ago</td><td class="mono" style="font-size:.7rem">$92.00</td><td><div class="ag"><div class="icon-btn" title="View proof" onclick="nav(null,'results')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M6.5 4v3l2 1"/></svg></div><div class="icon-btn" title="Re-run"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5A4.5 4.5 0 0111 4M11 4V1.5M11 4H8.5"/><path d="M11 6.5A4.5 4.5 0 012 9M2 9v2.5M2 9h2.5"/></svg></div><div class="icon-btn" title="Download"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 2v7M3.5 7l3 3 3-3"/><path d="M2 11h9"/></svg></div></div></td></tr>
+          <tr><td><div class="job-id">JOB-025</div></td><td><div class="job-nm">cmb_anomaly_scan</div><div class="job-sub">cmb_full_sky.fits · 8,800 toys</div></td><td><span class="tag t">Standard</span></td><td><span class="chip fail">&#10007; Failed</span></td><td>—</td><td class="mono" style="font-size:.65rem;color:var(--td)">Yesterday</td><td class="mono" style="font-size:.7rem;color:var(--td)">$0.00</td><td><div class="ag"><div class="icon-btn" title="Error detail" style="color:rgba(255,71,87,.5)" onclick="nav(null,'support')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M6.5 4v3M6.5 9.5v.5"/></svg></div><div class="icon-btn" title="Retry" onclick="nav(null,'support')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5A4.5 4.5 0 0111 4M11 4V1.5M11 4H8.5"/></svg></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAGE: NEW JOB -->
+  <div id="p-upload" class="page">
+    <div class="step-flow">
+      <div class="step done"><div class="step-n">&#10003;</div><div><div class="step-lbl">Upload</div><div class="step-sub">Dataset ready</div></div></div>
+      <div class="step active"><div class="step-n">2</div><div><div class="step-lbl">Profile</div><div class="step-sub">Choose compute</div></div></div>
+      <div class="step"><div class="step-n">3</div><div><div class="step-lbl">Estimate</div><div class="step-sub">Price check</div></div></div>
+      <div class="step"><div class="step-n">4</div><div><div class="step-lbl">Pay</div><div class="step-sub">One-click</div></div></div>
+      <div class="step"><div class="step-n">5</div><div><div class="step-lbl">Run</div><div class="step-sub">GPU executes</div></div></div>
+    </div>
+    <div class="g2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Dataset Upload</span><span class="tag">HDF5 · Parquet · NPY · FITS</span></div>
+          <div class="card-bd">
+            <div class="upload-zone">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="var(--line2)" stroke-width="1.5" style="margin:0 auto 10px;display:block"><path d="M18 26V10M11 17l7-7 7 7"/><rect x="4" y="28" width="28" height="4" rx="2"/></svg>
+              <div class="upload-title">Drop dataset file here</div>
+              <div class="upload-sub">or <strong>browse to upload</strong> · max 2 GB · <strong>SHA-256 verified on receipt</strong></div>
+              <div class="flex gap8" style="justify-content:center;margin-top:10px">
+                <input id="upload-file-input" type="file" style="display:none"/>
+                <button id="btn-upload-pick" class="outline-btn" style="width:auto;padding:6px 12px;font-size:.62rem">Select file</button>
+                <button id="btn-upload-submit" class="outline-btn" style="width:auto;padding:6px 12px;font-size:.62rem">Create job draft</button>
+              </div>
+              <div id="upload-status" class="mono" style="font-size:.6rem;color:var(--td);margin-top:8px">Upload: waiting for file selection.</div>
+            </div>
+            <div class="file-item">
+              <div class="fi-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="var(--teal)" stroke-width="1.5"><path d="M3 2h6l4 4v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v5h5"/></svg></div>
+              <div><div id="upload-dataset-name" class="fi-name">sigma_030_prepared.hdf5</div><div id="upload-dataset-meta" class="fi-meta">284.6 MB · 18,400 records · uploaded 14:01 UTC</div></div>
+              <div class="fi-ok"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M3 5l1.5 1.5L7 3.5" stroke="currentColor" stroke-width="1.2"/></svg>Verified</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Scan Parameters</span><span class="tag" style="background:rgba(0,229,200,.07);color:var(--teal);border-color:transparent">Smart defaults</span></div>
+          <div class="card-bd">
+            <div class="param-grid">
+              <div class="param-item"><label>N_toys (experiments)</label><input class="pi" id="ntoys" type="number" value="18400" min="100" max="500000" oninput="updateEst()"/></div>
+              <div class="param-item"><label>Signal model (UI mock)</label><select class="pi" disabled><option>Gaussian &#183; &#956;=125 GeV</option><option>Breit&#8211;Wigner</option><option>Crystal Ball</option><option>Custom kernel</option></select></div>
+              <div class="param-item"><label>Mass range (GeV)</label><input class="pi" id="mass-range" value="60 - 120"/></div>
+              <div class="param-item"><label>Scan mode</label><input class="pi" id="scan-mode" value="Single range (default)" readonly/></div>
+              <div class="param-item"><label>Significance threshold (UI mock)</label><input class="pi" value="5&#963; (CLs)" readonly/></div>
+            </div>
+            <button class="adv-toggle" onclick="this.classList.toggle('open');document.getElementById('adv').style.display=this.classList.contains('open')?'grid':'none'">
+              <svg class="adv-arrow" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5l4 4-4 4"/></svg>Advanced options (UI mock, not wired to runtime)</button>
+            <div id="adv" style="display:none;margin-top:10px;" class="param-grid">
+              <div class="param-item"><label>Random seed</label><input class="pi" value="0x4A2C9F1E" readonly/></div>
+              <div class="param-item"><label>Poly degree (bg)</label><input class="pi" type="number" value="4" readonly/></div>
+              <div class="param-item"><label>Bandwidth (KDE)</label><input class="pi" value="auto" readonly/></div>
+              <div class="param-item"><label>Verbosity</label><select class="pi" disabled><option>Normal</option><option>Verbose</option><option>Silent</option></select></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Compute Profile</span></div>
+          <div class="card-bd">
+            <div class="profiles">
+              <div class="pc quick" onclick="selProfile(this,'quick',0.000085,'Quick')">
+                <div class="pc-badge">&#9889; Quick</div><div class="pc-name">Quick Scan</div>
+                <div class="pc-price"><strong>$85.00</strong> / 1M toys &#183; +$2.00 base</div>
+                <div class="pc-spec">GPU: <span>FP16</span> &#183; ETA @ 18k: <span>~8 min</span> &#183; Reproducible: <span>Seeded</span></div>
+                <div class="pc-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5"/></svg></div>
+              </div>
+              <div class="pc standard sel" onclick="selProfile(this,'standard',0.000095,'Standard')">
+                <div class="pc-badge">&#9733; Standard</div><div class="pc-name">Standard</div>
+                <div class="pc-price"><strong>$95.00</strong> / 1M toys &#183; +$2.50 base</div>
+                <div class="pc-spec">GPU: <span>FP32</span> &#183; ETA @ 18k: <span>~14 min</span> &#183; Reproducible: <span>Bit-identical</span></div>
+                <div class="pc-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5"/></svg></div>
+              </div>
+              <div class="pc precise" onclick="selProfile(this,'precise',0.000245,'Precision+')">
+                <div class="pc-badge">&#128300; Precise</div><div class="pc-name">Precision+</div>
+                <div class="pc-price"><strong>$245.00</strong> / 1M toys &#183; +$5.00 base</div>
+                <div class="pc-spec">GPU: <span>FP64</span> &#183; ETA @ 18k: <span>~21 min</span> &#183; Reproducible: <span>Full audit chain</span></div>
+                <div class="pc-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Price Estimate</span><span class="tag t" id="profile-tag">Standard</span></div>
+          <div class="card-bd">
+            <div class="est">
+              <div class="est-row"><span class="lbl">n_toys</span><span class="val" id="est-n">18,400</span></div>
+              <div class="est-row"><span class="lbl" id="est-rate-lbl">Rate (Standard · FP32)</span><span class="val" id="est-rate">&#215; $95.00 / 1M toys + $2.50 base</span></div>
+              <div class="est-row"><span class="lbl">Quality gate</span><span class="val">included</span></div>
+              <div class="est-row"><span class="lbl">Proof generation</span><span class="val">included</span></div>
+              <div class="est-row tot"><span class="lbl">Estimated total</span><span class="val" id="est-total">$4.25</span></div>
+              <div class="est-row cap"><span class="lbl">Maximum cap</span><span class="val" id="est-cap">$4.25</span></div>
+            </div>
+            <div class="cap-note">&#10003; Never charged more than cap &#183; Unused compute not billed &#183; Proof artifacts always included</div>
+            <button id="btn-upload-to-checkout" class="cta">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h10l-1 7H3L2 4z"/><path d="M4.5 4V3a2.5 2.5 0 015 0v1"/></svg>
+              Proceed to Checkout &#183; <span id="cta-price">$4.25</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: CHECKOUT -->
+  <div id="p-checkout" class="page">
+    <div class="g13">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Payment Method</span></div>
+          <div class="card-bd">
+            <div class="pay-methods">
+              <button class="pay-btn sel" data-provider="card" onclick="selPay(this)">&#128179; Card</button>
+              <button class="pay-btn" data-provider="paypal" onclick="selPay(this)"> Pay</button>
+              <button class="pay-btn" data-provider="google_pay" onclick="selPay(this)">G Pay</button>
+              <button class="pay-btn" data-provider="invoice" onclick="selPay(this)">&#128196; Invoice</button>
+            </div>
+            <div class="card-form">
+              <div class="fl"><label>Card Number</label><input id="pm-card-number" class="fi2" placeholder="4242  4242  4242  4242" maxlength="19"/></div>
+              <div class="cr">
+                <div class="fl"><label>Expiry</label><input id="pm-expiry" class="fi2" placeholder="MM / YY" maxlength="7"/></div>
+                <div class="fl"><label>CVC</label><input id="pm-cvc" class="fi2" placeholder="&#8226;&#8226;&#8226;" maxlength="4"/></div>
+              </div>
+              <div class="fl"><label>Name on card</label><input id="pm-name" class="fi2" placeholder="Dr. M. Karev"/></div>
+            </div>
+            <label class="inv-tog"><input type="checkbox" id="inv-cb" onchange="toggleInv()"/><div><div class="itl"><strong>Institution / Invoice billing</strong></div><div class="itl" style="font-size:.65rem;color:var(--td)">PO number, NET-30, VAT fields</div></div></label>
+            <div id="inv-fields" style="display:none;margin-top:8px">
+              <div class="tax-row">
+                <div class="fl"><label>PO Number</label><input class="fi2" placeholder="PO-2024-0391"/></div>
+                <div class="fl"><label>VAT / Tax ID</label><input class="fi2" placeholder="DE 123456789"/></div>
+              </div>
+              <div class="fl" style="margin-top:8px"><label>Billing Email</label><input class="fi2" type="email" placeholder="finance@institution.edu"/></div>
+            </div>
+            <button id="btn-checkout-launch" class="cta">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 7l3.5 3.5L12 3"/></svg>
+              <span id="checkout-launch-label">Pay $4.25 &#183; Launch Job</span>
+            </button>
+            <div id="checkout-status" class="mono" style="font-size:.62rem;color:var(--td);margin-top:8px">Checkout: waiting for job context.</div>
+            <div class="pay-security"><svg width="9" height="10" viewBox="0 0 9 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="4" width="7" height="5.5" rx="1"/><path d="M2.5 4V3a2 2 0 014 0v1"/></svg>256-bit TLS &#183; Stripe &#183; Card never stored on AXIOM</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Saved Payment Methods</span></div>
+          <div class="card-bd" id="payment-method-list">
+            <div class="mono" style="font-size:.62rem;color:var(--td)">Loading payment methods...</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Order Summary</span></div>
+          <div class="card-bd">
+            <div class="est">
+              <div class="est-row"><span class="lbl">Job</span><span id="co-job" class="val" style="font-size:.65rem">sigma_030_prepared.hdf5</span></div>
+              <div class="est-row"><span class="lbl">Profile</span><span id="co-profile" class="val">Standard &#183; FP32</span></div>
+              <div class="est-row"><span class="lbl">n_toys</span><span id="co-ntoys" class="val">18,400</span></div>
+              <div class="est-row"><span class="lbl">Rate</span><span id="co-rate" class="val">$95.00 / 1M toys + $2.50 base</span></div>
+              <div class="est-row"><span class="lbl">Subtotal</span><span id="co-subtotal" class="val">$4.25</span></div>
+              <div class="est-row"><span class="lbl">VAT</span><span id="co-tax" class="val">$0.00</span></div>
+              <div class="est-row tot"><span class="lbl">Total due</span><span id="co-total" class="val">$4.25</span></div>
+            </div>
+            <div class="cap-note" style="margin-top:8px">&#10003; Proof &amp; reproducibility artifacts included<br>&#10003; Quality gate with reliability score<br>&#10003; Tamper-evident calculation signature<br>&#10003; Card authorized now, charged after job completes</div>
+          </div>
+        </div>
+        <div class="card" style="border-color:rgba(0,229,200,.18)">
+          <div class="card-bd">
+            <div class="flex gap8" style="align-items:flex-start">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--teal)" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="6"/><path d="M8 6v3M8 11v.5"/></svg>
+              <div><div style="font-size:.74rem;font-weight:600;color:var(--th);margin-bottom:2px">First charge after job completes</div><div class="mono" style="font-size:.6rem;color:var(--td);line-height:1.5">Card is authorized now. You are only charged the actual compute used, capped at the estimate.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: RESULTS & PROOFS -->
+  <div id="p-results" class="page">
+    <div id="results-tabs" style="display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:4px"></div>
+    <div id="results-status" class="mono" style="font-size:.62rem;color:var(--td);margin:8px 0">Loading results...</div>
+    <div id="results-content"></div>
+  </div>
+
+  <!-- PAGE: TEAM -->
+  <div id="p-team" class="page">
+    <div class="g2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Team Members</span><button id="btn-team-invite" class="outline-btn" style="width:auto;padding:5px 12px;font-size:.62rem">+ Invite Member</button></div>
+          <table class="tt">
+            <thead><tr><th>Member</th><th>Role</th><th>Jobs</th><th>Spend (30d)</th><th></th></tr></thead>
+            <tbody id="team-table-body">
+              <tr><td><div class="flex gap8" style="align-items:center"><div class="avatar">MK</div><div><div style="font-size:.74rem;font-weight:500;color:var(--th)">Dr. M. Karev</div><div class="mono" style="font-size:.58rem;color:var(--td)">mkarev@neurolab.eu</div></div></div></td><td><span class="role ra">Admin</span></td><td class="mono" style="font-size:.7rem;color:var(--tm)">89</td><td class="mono" style="font-size:.7rem;color:var(--tm)">$1,802</td><td><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="3.5" r="1.5"/><circle cx="6.5" cy="9.5" r="1.5"/></svg></div></td></tr>
+              <tr><td><div class="flex gap8" style="align-items:center"><div class="avatar" style="background:linear-gradient(135deg,#3a1a6e,#9b59b6)">RP</div><div><div style="font-size:.74rem;font-weight:500;color:var(--th)">R. Pedrosa</div><div class="mono" style="font-size:.58rem;color:var(--td)">rpedrosa@neurolab.eu</div></div></div></td><td><span class="role rb">Billing</span></td><td class="mono" style="font-size:.7rem;color:var(--tm)">0</td><td class="mono" style="font-size:.7rem;color:var(--tm)">—</td><td><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="3.5" r="1.5"/><circle cx="6.5" cy="9.5" r="1.5"/></svg></div></td></tr>
+              <tr><td><div class="flex gap8" style="align-items:center"><div class="avatar" style="background:linear-gradient(135deg,#1a3e6e,#2980b9)">TW</div><div><div style="font-size:.74rem;font-weight:500;color:var(--th)">T. Winters</div><div class="mono" style="font-size:.58rem;color:var(--td)">twinters@neurolab.eu</div></div></div></td><td><span class="role rd">Developer</span></td><td class="mono" style="font-size:.7rem;color:var(--tm)">58</td><td class="mono" style="font-size:.7rem;color:var(--tm)">$382</td><td><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="3.5" r="1.5"/><circle cx="6.5" cy="9.5" r="1.5"/></svg></div></td></tr>
+              <tr><td><div class="flex gap8" style="align-items:center"><div class="avatar" style="background:linear-gradient(135deg,#1e3a1e,#27ae60)">AL</div><div><div style="font-size:.74rem;font-weight:500;color:var(--th)">A. Lavoie</div><div class="mono" style="font-size:.58rem;color:var(--td)">alavoie@neurolab.eu</div></div></div></td><td><span class="role rv">Viewer</span></td><td class="mono" style="font-size:.7rem;color:var(--tm)">0</td><td class="mono" style="font-size:.7rem;color:var(--tm)">—</td><td><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="3.5" r="1.5"/><circle cx="6.5" cy="9.5" r="1.5"/></svg></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">Monthly Spend Limits</span></div>
+          <div class="card-bd">
+            <div class="spend-m">
+              <div class="s-row"><div class="s-lbl">Used this month</div><div id="team-spend-used" class="s-val">$0.00 / $0.00</div></div>
+              <div class="s-track"><div id="team-spend-fill" class="s-fill"></div></div>
+              <div class="s-meta"><span id="team-spend-min">$0</span><span id="team-spend-pct">0% used</span><span id="team-spend-max">$0</span></div>
+            </div>
+            <div class="divider"></div>
+            <div class="param-item" style="margin-bottom:9px"><label>Org monthly cap ($)</label><input id="team-cap-input" class="pi" type="number" value="0"/></div>
+            <div class="param-item" style="margin-bottom:9px"><label>Developer per-member limit ($)</label><input id="team-dev-limit-input" class="pi" type="number" value="0"/></div>
+            <div class="param-item" style="margin-bottom:12px"><label>Alert at (% of org cap)</label><input id="team-alert-input" class="pi" type="number" value="80"/></div>
+            <button id="btn-team-save-limits" class="outline-btn">Save limits</button>
+            <div id="team-policy-status" class="mono" style="font-size:.6rem;color:var(--td);margin-top:8px">Policy source: loading...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">API Keys</span></div>
+          <div class="card-bd">
+            <div id="team-api-keys-list"></div>
+            <button id="btn-team-create-api-key" class="export-btn" style="margin-top:10px;width:100%;justify-content:center">+ Create new API key</button>
+            <div id="team-api-keys-status" class="mono" style="font-size:.6rem;color:var(--td);margin-top:8px">Key source: loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: INVOICES -->
+  <div id="p-invoices" class="page">
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Invoices</span><select class="pi" style="padding:5px 10px;font-size:.65rem;width:auto"><option>All time</option><option>This year</option><option>Q1 2024</option></select></div>
+      <div class="card-bd">
+        <div class="inv-list" id="invoice-list">
+          <div class="inv-item"><div class="inv-num">INV-2024-003</div><div class="inv-date">Mar 15, 2024</div><div class="inv-desc">Standard &#183; 89 jobs &#183; 1.2M toys</div><div class="inv-amt">$2,184.00</div><span class="inv-paid">Paid</span><div class="flex gap8" style="margin-left:8px"><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 1.5h4.5L10 4v7a1 1 0 01-1 1H3a1 1 0 01-1-1V2.5a1 1 0 011-1z"/><path d="M7.5 1.5v3H11"/></svg></div></div></div>
+          <div class="inv-item"><div class="inv-num">INV-2024-002</div><div class="inv-date">Feb 29, 2024</div><div class="inv-desc">Standard + Precise &#183; 63 jobs</div><div class="inv-amt">$1,940.50</div><span class="inv-paid">Paid</span><div class="flex gap8" style="margin-left:8px"><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 1.5h4.5L10 4v7a1 1 0 01-1 1H3a1 1 0 01-1-1V2.5a1 1 0 011-1z"/><path d="M7.5 1.5v3H11"/></svg></div></div></div>
+          <div class="inv-item"><div class="inv-num">INV-2024-001</div><div class="inv-date">Jan 31, 2024</div><div class="inv-desc">Quick + Standard &#183; 41 jobs</div><div class="inv-amt">$892.30</div><span class="inv-paid">Paid</span><div class="flex gap8" style="margin-left:8px"><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 1.5h4.5L10 4v7a1 1 0 01-1 1H3a1 1 0 01-1-1V2.5a1 1 0 011-1z"/><path d="M7.5 1.5v3H11"/></svg></div></div></div>
+          <div class="inv-item"><div class="inv-num">INV-2024-DFT</div><div class="inv-date">Current</div><div class="inv-desc">Mar 2024 &#183; 3 jobs in progress</div><div class="inv-amt">$481.70</div><span class="inv-draft">Draft</span><div class="flex gap8" style="margin-left:8px"><div class="icon-btn"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="6.5" cy="6.5" r="5"/><path d="M2 6.5s2-3.5 4.5-3.5S11 6.5 11 6.5s-2 3.5-4.5 3.5S2 6.5 2 6.5z"/><circle cx="6.5" cy="6.5" r="1.5"/></svg></div></div></div>
+        </div>
+        <div class="divider"></div>
+        <div id="invoice-sync-status" class="mono" style="font-size:.62rem;color:var(--td);margin-bottom:8px">Invoice data source: static mock</div>
+        <div class="flex gap8" style="flex-wrap:wrap">
+          <button id="btn-export-csv-all" class="export-btn"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M5.5 1v7M3 6l2.5 2.5L8 6"/><path d="M1 9.5h9"/></svg>Export CSV (all jobs)</button>
+          <button id="btn-export-csv-month" class="export-btn"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M5.5 1v7M3 6l2.5 2.5L8 6"/><path d="M1 9.5h9"/></svg>Export CSV (current month)</button>
+          <button id="btn-export-pdf-bulk" class="export-btn"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2.5 1.5h4l3 3v5a1 1 0 01-1 1H2.5a1 1 0 01-1-1V2.5a1 1 0 011-1z"/></svg>Download all PDF invoices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: SUPPORT -->
+  <div id="p-support" class="page">
+    <div id="support-alerts">
+      <div class="alert al-err"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="6.5"/><path d="M8.5 5.5v4M8.5 12v.5"/></svg><div class="al-txt"><strong>JOB-025 failed</strong> &#8212; Input validation error: background polynomial degree exceeds dataset dimensionality. <span class="mono" style="font-size:.6rem;color:var(--td)">ErrCode: E-4212 &#183; Not billed</span></div><button class="al-cta-r" onclick="nav(null,'upload')">Fix &amp; Retry &#8594;</button></div>
+    </div>
+    <div class="alert al-warn"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="var(--amber)" stroke-width="1.5"><path d="M8.5 2L1.5 14.5h14L8.5 2z"/><path d="M8.5 7v4M8.5 13v.5"/></svg><div class="al-txt"><strong>Payment method expiring</strong> &#8212; Visa &#183;&#183;&#183;&#183; 4242 expires in 14 days. Update before next billing cycle.</div><button class="al-cta" onclick="nav(null,'checkout')">Update card &#8594;</button></div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><span class="card-title">Get Help</span></div>
+        <div class="card-bd">
+          <div class="sup-grid">
+            <div class="sup-item"><div class="sup-ico ic-t"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M13.5 9.5a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h7.5a2 2 0 012 2v5.5z"/></svg></div><div><div class="sup-title">Live Chat</div><div class="sup-desc">Avg response: 2 min<br>Technical support 24/7</div></div></div>
+            <div class="sup-item"><div class="sup-ico ic-a"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4h11v7a1 1 0 01-1 1H3a1 1 0 01-1-1V4z"/><path d="M2 4l5.5 5 5.5-5"/></svg></div><div><div class="sup-title">Email Support</div><div class="sup-desc">support@axiom.compute<br>SLA: 4h business hours</div></div></div>
+            <div class="sup-item"><div class="sup-ico ic-p"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 5a2 2 0 011.9 2.6C9.2 8.1 8.5 8.7 8.5 9.8"/><circle cx="7.5" cy="11.5" r=".5" fill="currentColor"/></svg></div><div><div class="sup-title">Docs &amp; API Ref</div><div class="sup-desc">Error codes, proof guide<br>Integration examples</div></div></div>
+            <div class="sup-item"><div class="sup-ico ic-g"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7.5 2a5.5 5.5 0 105.5 5.5"/><path d="M10.5 2l3 3-3 3"/></svg></div><div><div class="sup-title">Service Status</div><div class="sup-desc">status.axiom.compute<br>All systems operational &#10003;</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">Self-Serve Recovery</span></div>
+        <div class="card-bd">
+          <div class="alert al-info" style="margin-bottom:10px"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="var(--teal)" stroke-width="1.4"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 6v4M7.5 4.5v.5"/></svg><div class="al-txt" style="font-size:.7rem">JOB-025 was <strong>not charged</strong> (pre-execution failure). No credit needed.</div></div>
+          <div class="col" style="gap:6px">
+            <button id="btn-recovery-retry-job" class="dl-btn" onclick="nav(null,'upload')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--teal)" stroke-width="1.3"><path d="M2 6.5A4.5 4.5 0 0111 4M11 4V1.5M11 4H8.5"/></svg><div><div class="dl-nm" style="color:var(--th)">Retry latest failed job</div><div class="dl-sz">Pre-fills dataset + config from failed run</div></div><span style="margin-left:auto;color:var(--teal)">&#8594;</span></button>
+            <button id="btn-recovery-credit" class="dl-btn"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--amber)" stroke-width="1.3"><rect x="2" y="2" width="9" height="9" rx="1.5"/><path d="M6.5 4.5v4M4.5 6.5h4"/></svg><div><div class="dl-nm" style="color:var(--th)">Request compute credit</div><div class="dl-sz">For AXIOM-side failures &#183; resolved &lt;1h</div></div><span style="margin-left:auto">&#8594;</span></button>
+            <button id="btn-recovery-dispute" class="dl-btn"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--tm)" stroke-width="1.3"><path d="M2 4h9l-1 6H3L2 4z"/><path d="M4.5 4V3.5a2 2 0 014 0V4"/></svg><div><div class="dl-nm" style="color:var(--th)">Dispute charge / Request refund</div><div class="dl-sz">Self-serve &#183; decisions within 24h</div></div><span style="margin-left:auto">&#8594;</span></button>
+            <button id="btn-recovery-retry-payment" class="dl-btn"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="var(--tm)" stroke-width="1.3"><rect x="1.5" y="3" width="10" height="7.5" rx="1.5"/><path d="M1.5 5.5h10"/><path d="M4.5 8h1M7.5 8h1"/></svg><div><div class="dl-nm" style="color:var(--th)">Retry failed payment</div><div class="dl-sz">Use latest impacted job</div></div><span style="margin-left:auto">&#8594;</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Error Detail &#183; JOB-025</span><span class="chip fail">&#10007; Pre-execution failure</span></div>
+      <div class="card-bd">
+        <div class="cfg" style="border-left:2px solid var(--red);padding-left:13px">
+          <span style="color:var(--red)">ERROR E-4212</span> &#183; InputValidationError<br>
+          <span class="ck">message:</span> <span style="color:var(--t)">"Background polynomial degree (8) exceeds degrees of freedom for dataset dimensionality (6). Reduce poly_degree to &#8804; 5 or increase n_toys."</span><br><br>
+          <span class="ck">job_id:</span> <span class="cv">"JOB-025"</span><br>
+          <span class="ck">phase:</span> <span class="cv">"pre_execution_validation"</span><br>
+          <span class="ck">charged:</span> <span style="color:var(--green)">false</span><br>
+          <span class="ck">timestamp:</span> <span class="cv">"2024-03-14T18:22:04Z"</span>
+        </div>
+        <div class="flex gap8" style="margin-top:10px">
+          <button class="export-btn"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M5.5 1v7M3 6l2.5 2.5L8 6"/><path d="M1 9.5h9"/></svg>Download full error log</button>
+          <button class="export-btn"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 5.5h9M6 1l4 4.5L6 10"/></svg>Open E-4212 in docs</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+<script>
+const crumbs={jobs:'Job Queue',upload:'New Job',checkout:'Checkout',results:'Results & Proofs',team:'Team & Roles',invoices:'Invoices & Exports',support:'Support & Recovery'};
+const navLabels={jobs:'Job Queue',upload:'New Job',results:'Results & Proofs',checkout:'Checkout',invoices:'Invoices & Exports',team:'Team & Roles',support:'Support & Recovery'};
+// ensure `setAuthVisual` exists early to avoid race-time errors
+if(typeof window.setAuthVisual !== 'function'){
+  window.setAuthVisual = function(user){
+    try{
+      const pill = document.getElementById('auth-pill');
+      const sbA = document.getElementById('sb-avatar');
+      const sbN = document.getElementById('sb-user-name');
+      const sbR = document.getElementById('sb-user-role');
+      const bIn = document.getElementById('btn-auth-login');
+      const bReg = document.getElementById('btn-auth-register');
+      const bForgot = document.getElementById('btn-auth-forgot');
+      const bOut = document.getElementById('btn-auth-logout');
+      if(!user){
+        if(pill) pill.textContent = 'Not signed in';
+        if(sbA) sbA.textContent = '?';
+        if(sbN) sbN.textContent = 'Not signed in';
+        if(sbR) sbR.textContent = 'AUTH REQUIRED';
+        if(bIn) bIn.style.display = '';
+        if(bReg) bReg.style.display = '';
+        if(bForgot) bForgot.style.display = '';
+        if(bOut) bOut.style.display = 'none';
+        return;
+      }
+      const name = String(user.display_name || user.email || user.account_id || 'User');
+      const roleName = String((user.role || (user.is_admin ? 'admin' : 'viewer')) || 'viewer').toUpperCase();
+      const role = roleName + ' · ' + String(user.organization_id || user.account_id || '');
+      if(pill) pill.textContent = name;
+      if(sbA) sbA.textContent = name.slice(0,2).toUpperCase();
+      if(sbN) sbN.textContent = name;
+      if(sbR) sbR.textContent = role;
+      if(bIn) bIn.style.display = 'none';
+      if(bReg) bReg.style.display = 'none';
+      if(bForgot) bForgot.style.display = 'none';
+      if(bOut) bOut.style.display = '';
+    }catch(_){/* swallow errors during early init */}
+  };
+}
+function nav(el,pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p-'+pg).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('bc').textContent=crumbs[pg]||pg;
+  if(pg==='jobs'){ loadJobsDashboard(); }
+  if(pg==='checkout'){ loadCheckoutPanel(); }
+  if(pg==='results'){ loadResultsPanel(); }
+  if(pg==='invoices'){ loadInvoices(); }
+  if(pg==='team'){ loadTeamMembers(); loadTeamGovernance(); }
+  if(pg==='support'){ loadSupportArea(); }
+}
+let rate=0.000095;
+let currentProfile='standard';
+let currentProfileLabel='Standard';
+let selectedPayProvider='card';
+const PROFILE_LABELS={quick:'Quick · FP16',standard:'Standard · FP32',precise:'Precise · FP64'};
+const CHECKOUT_PROVIDER_MAP={card:'mock',paypal:'paypal',google_pay:'mock',invoice:'mock'};
+const checkoutState={jobId:null,quote:null,authorization:null,paymentMethods:[]};
+const uploadState={file:null,lastSubmittedJobId:null};
+let selectedResultsJobId=null;
+
+function setCheckoutStatus(msg,isErr){
+  const el=document.getElementById('checkout-status');
+  if(!el){ return; }
+  el.textContent=String(msg || '');
+  el.style.color=isErr?'var(--red)':'var(--td)';
+}
+
+function setUploadStatus(msg,isErr){
+  const el=document.getElementById('upload-status');
+  if(!el){ return; }
+  el.textContent=String(msg || '');
+  el.style.color=isErr?'var(--red)':'var(--td)';
+}
+
+function formatBytes(n){
+  const x=Number(n || 0);
+  if(!isFinite(x) || x <= 0){ return '0 B'; }
+  if(x < 1024){ return x.toFixed(0) + ' B'; }
+  if(x < 1024*1024){ return (x/1024).toFixed(1) + ' KB'; }
+  if(x < 1024*1024*1024){ return (x/(1024*1024)).toFixed(1) + ' MB'; }
+  return (x/(1024*1024*1024)).toFixed(2) + ' GB';
+}
+
+function selectedUploadFile(){
+  const inp=document.getElementById('upload-file-input');
+  if(!inp || !inp.files || inp.files.length === 0){ return null; }
+  return inp.files[0];
+}
+
+function updateUploadFilePreview(file){
+  const nm=document.getElementById('upload-dataset-name');
+  const meta=document.getElementById('upload-dataset-meta');
+  if(nm){ nm.textContent = file ? String(file.name || 'dataset_upload.bin') : 'sigma_030_prepared.hdf5'; }
+  if(meta){
+    if(file){
+      meta.textContent = formatBytes(file.size) + ' · selected locally · ready to upload';
+    }else{
+      meta.textContent = 'No file selected';
+    }
+  }
+  refreshCheckoutSummaryFromEstimate();
+}
+
+// helper to map whatever the UI shows into the canonical API value
+function normalizeUiProfileToApiProfile(p) {
+  const v = String(p || '').trim().toLowerCase();
+  if (v === 'quick') return 'quick';
+  if (v === 'standard') return 'standard';
+  if (v === 'precise' || v === 'precision+' || v === 'precision') return 'precise';
+  return 'standard'; // safe default
+}
+
+async function submitNewJobDraft(){
+  if(!getStoredToken()){
+    throw new Error('Please sign in first.');
+  }
+  const file=selectedUploadFile();
+  if(!file){
+    throw new Error('Select a dataset file first.');
+  }
+
+  if(window.isSubmitting){
+    throw new Error('Submission already in progress');
+  }
+  window.isSubmitting = true;
+
+  // derive API profile from whatever the UI state currently says
+  const uiProfile = (checkoutState && checkoutState.profile) || currentProfile || 'standard';
+  const selectedProfileApi = normalizeUiProfileToApiProfile(uiProfile);
+
+  const scanConf = currentScanConfig();
+  // always set worker_profile so backend resolver isn't left with none
+  scanConf.worker_profile = selectedProfileApi;
+  // currentScanConfig may include a gateway select; ensure empty value omits field
+  if('kernel_gateway_mode' in scanConf && !scanConf.kernel_gateway_mode){
+    delete scanConf.kernel_gateway_mode;
+  }
+
+  // force sane defaults for quick/CUDA path while UI may still jitter
+  if(selectedProfileApi === 'quick'){
+    scanConf.worker_mode = 'fused_scoring';
+    scanConf.worker_profile = 'quick';
+  }
+
+
+  const payload={
+    dataset_name: String(file.name || 'dataset_upload.bin'),
+    input: {type:'upload', files:[String(file.name || 'dataset_upload.bin')]},
+    schema_hint: {observable:'mass', column_or_branch:'auto', units:'GeV'},
+    scan: scanConf,
+    compute: {kernel_profile: selectedProfileApi, target:'auto', execution_mode:'auto'},
+    billing: {mode:'customer_metered', provider:'mock'}
+  };
+
+  // debug dump of what is actually being sent
+  console.log('FULL JOB PAYLOAD JSON', JSON.parse(JSON.stringify(payload)));
+  console.log('SCAN CONF JSON', JSON.parse(JSON.stringify(scanConf)));
+
+  // guard: drop any explicit-but-empty fields that could confuse the
+  // worker resolver.  this also acts as a soft fix if the UI slipped them
+  // in accidentally.
+  for (const k of ['worker_cmd', 'fused_worker_cmd', 'kernel_gateway_mode', 'worker_profile', 'worker_mode']) {
+    const v = payload.scan?.[k];
+    if (v === null || v === undefined || v === '') {
+      console.warn(`Dropping empty scan.${k}`, v);
+      delete payload.scan[k];
+    }
+  }
+
+  // debug log so developer can see the mapping
+  console.log('Submit /v1/jobs profile mapping:', {
+    uiSelected: uiProfile,
+    mapped: selectedProfileApi,
+    scan_worker_profile: payload.scan.worker_profile,
+    compute_kernel_profile: payload.compute.kernel_profile
+  });
+
+  // sanity check: scan and compute profiles should agree
+  if(payload.scan.worker_profile && payload.compute.kernel_profile && payload.scan.worker_profile !== payload.compute.kernel_profile){
+    console.warn('profile mismatch between scan and compute', payload.scan.worker_profile, payload.compute.kernel_profile);
+  }
+  const form=new FormData();
+  form.append('request', JSON.stringify(payload));
+  form.append('files', file, file.name || 'upload.bin');
+  const r=await apiFetch('/v1/jobs', {method:'POST', body: form});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok){
+    throw new Error('Job submit failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  checkoutState.jobId=String(data.job_id || '');
+  checkoutState.quote=null;
+  checkoutState.authorization=null;
+  uploadState.lastSubmittedJobId=checkoutState.jobId;
+  window.isSubmitting = false;  // release flag before return
+  return data;
+}
+
+function profileDisplayLabel(profile){
+  const p=String(profile || currentProfile || 'standard').toLowerCase();
+  return PROFILE_LABELS[p] || PROFILE_LABELS.standard;
+}
+
+function uploadDatasetName(){
+  const el=document.getElementById('upload-dataset-name');
+  return (el && el.textContent ? el.textContent : 'dataset_upload.bin').trim();
+}
+
+function currentNtoysValue(){
+  const el=document.getElementById('ntoys');
+  return Math.max(1, parseInt((el && el.value) || '0', 10) || 0);
+}
+
+function parseMassRangeInput(raw){
+  const txt=String(raw || '').replace(/[–—]/g, '-').trim();
+  const m=txt.match(/^([0-9]+(?:\.[0-9]+)?)\s*-\s*([0-9]+(?:\.[0-9]+)?)$/);
+  if(!m){ return {scan_min:60.0, scan_max:120.0}; }
+  const a=Number(m[1]), b=Number(m[2]);
+  if(!isFinite(a) || !isFinite(b) || b <= a){ return {scan_min:60.0, scan_max:120.0}; }
+  return {scan_min:a, scan_max:b};
+}
+
+function currentScanConfig(){
+  const rangeEl=document.getElementById('mass-range');
+  const range=parseMassRangeInput(rangeEl ? rangeEl.value : '60 - 120');
+  const span=Math.max(1e-6, range.scan_max - range.scan_min);
+  const scan = {
+    scan_min: range.scan_min,
+    scan_max: range.scan_max,
+    window_width: span,
+    window_step: span,
+    n_toys: currentNtoysValue(),
+    signal_tracking: {engine:'python', mc_mode:'vectorized'}
+  };
+  // propagate worker profile from UI state
+  const uiProf = (checkoutState && checkoutState.profile) || currentProfile || 'standard';
+  const profileApi = normalizeUiProfileToApiProfile(uiProf);
+  scan.worker_profile = profileApi;
+
+  // explicit mapping from profile -> worker_mode
+  const profileToMode = {
+    quick: 'fused_scoring',
+    standard: 'fused_scoring',    // could choose 'scoring' if desired
+    precise: 'fused_scoring'      // adjust as requirements evolve
+  };
+  scan.worker_mode = profileToMode[profileApi] || 'scoring';
+
+  // scrub any stray/legacy command fields; always clear them out
+  delete scan.worker_cmd;
+  delete scan.fused_worker_cmd;
+
+  // if gateway dropdown exists, only include non-empty value
+  const gwEl = document.getElementById('kernelGatewayMode');
+  if(gwEl){
+    const gw = String(gwEl.value || '').trim();
+    if(gw) scan.kernel_gateway_mode = gw;
+  }
+  return scan;
+}
+
+function fmtRatePerMillionFromPerToy(perToy){
+  const r = Number(perToy || 0);
+  return '$' + (r * 1000000).toFixed(2) + ' / 1M toys';
+}
+
+function profileBaseFee(profile){
+  const p=String(profile || currentProfile || 'standard').toLowerCase();
+  if(p === 'quick'){ return 2.00; }
+  if(p === 'precise'){ return 5.00; }
+  return 2.50;
+}
+
+function refreshCheckoutSummaryFromEstimate(){
+  const n=currentNtoysValue();
+  const t=(profileBaseFee(currentProfile) + (rate*n)).toFixed(2);
+  const set=function(id,v){ const el=document.getElementById(id); if(el){ el.textContent=v; } };
+  set('co-job', uploadDatasetName());
+  set('co-profile', profileDisplayLabel(currentProfile));
+  set('co-ntoys', n.toLocaleString());
+  set('co-rate', fmtRatePerMillionFromPerToy(rate) + ' + $' + profileBaseFee(currentProfile).toFixed(2) + ' base');
+  set('co-subtotal', '$'+t);
+  set('co-tax', '$0.00');
+  set('co-total', '$'+t);
+  const launch=document.getElementById('checkout-launch-label');
+  if(launch){ launch.textContent='Pay $'+t+' · Launch Job'; }
+}
+
+function selProfile(card,profile,r,label){
+  document.querySelectorAll('.pc').forEach(c=>c.classList.remove('sel'));
+  card.classList.add('sel');
+  rate=r;
+  currentProfile=String(profile || 'standard').toLowerCase();
+  currentProfileLabel=String(label || 'Standard');
+  const labels={quick:'Quick &#183; FP16',standard:'Standard &#183; FP32',precise:'Precise &#183; FP64'};
+  document.getElementById('profile-tag').innerHTML=label;
+  document.getElementById('est-rate-lbl').innerHTML='Rate ('+labels[profile]+')';
+  document.getElementById('est-rate').textContent='x ' + fmtRatePerMillionFromPerToy(r) + ' + $' + profileBaseFee(profile).toFixed(2) + ' base';
+  updateEst();
+}
+function updateEst(){
+  const n=currentNtoysValue();
+  const t=(profileBaseFee(currentProfile) + (rate*n)).toFixed(2);
+  document.getElementById('est-n').textContent=n.toLocaleString();
+  document.getElementById('est-total').textContent='$'+t;
+  document.getElementById('est-cap').textContent='$'+t;
+  document.getElementById('cta-price').textContent='$'+t;
+  refreshCheckoutSummaryFromEstimate();
+}
+function selPay(btn){
+  btn.closest('.pay-methods').querySelectorAll('.pay-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  selectedPayProvider=String(btn.getAttribute('data-provider') || 'card').toLowerCase();
+}
+function toggleInv(){
+  const cb=document.getElementById('inv-cb');
+  const f=document.getElementById('inv-fields');
+  if(f) f.style.display=cb.checked?'block':'none';
+}
+
+function escHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g, function(ch){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+  });
+}
+
+function fmtUsd(n){
+  const x = Number(n || 0);
+  return '$' + x.toFixed(2);
+}
+
+function fmtDate(ts){
+  const x = Number(ts || 0);
+  if(!x){ return 'n/a'; }
+  try{
+    return new Date(x * 1000).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+  }catch(_){
+    return 'n/a';
+  }
+}
+
+function setInvoiceStatus(msg, isErr){
+  const el = document.getElementById('invoice-sync-status');
+  if(!el){ return; }
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--red)' : 'var(--td)';
+}
+
+function getStoredToken(){
+  let t = (localStorage.getItem('axiom_api_token') || '').trim();
+  if(t){ return t; }
+  try{
+    const qp = new URLSearchParams(window.location.search || '');
+    const qTok = (qp.get('token') || '').trim();
+    if(qTok){
+      localStorage.setItem('axiom_api_token', qTok);
+      return qTok;
+    }
+  }catch(_){}
+  return '';
+}
+
+function setStoredToken(token){
+  const t = String(token || '').trim();
+  if(!t){ return; }
+  localStorage.setItem('axiom_api_token', t);
+}
+
+function clearStoredToken(){
+  localStorage.removeItem('axiom_api_token');
+}
+
+async function apiFetch(path, opts){
+  const token = getStoredToken();
+  const headers = Object.assign({}, (opts && opts.headers) || {});
+  if(token){ headers['Authorization'] = 'Bearer ' + token; }
+  const resp = await fetch(path, Object.assign({}, opts || {}, { headers }));
+  if(resp.status === 404){
+    console.warn('apiFetch got 404 for', path, opts);
+  }
+  return resp;
+}
+
+// manage the auth UI pill/avatar/etc.
+function setAuthVisual(user){
+  const pill = document.getElementById('auth-pill');
+  const sbA = document.getElementById('sb-avatar');
+  const sbN = document.getElementById('sb-user-name');
+  const sbR = document.getElementById('sb-user-role');
+  const bIn = document.getElementById('btn-auth-login');
+  const bReg = document.getElementById('btn-auth-register');
+  const bForgot = document.getElementById('btn-auth-forgot');
+  const bOut = document.getElementById('btn-auth-logout');
+  if(!user){
+    if(pill){ pill.textContent = 'Not signed in'; }
+    if(sbA){ sbA.textContent = '?'; }
+    if(sbN){ sbN.textContent = 'Not signed in'; }
+    if(sbR){ sbR.textContent = 'AUTH REQUIRED'; }
+    if(bIn){ bIn.style.display = ''; }
+    if(bReg){ bReg.style.display = ''; }
+    if(bForgot){ bForgot.style.display = ''; }
+    if(bOut){ bOut.style.display = 'none'; }
+    return;
+  }
+  const name = String(user.display_name || user.email || user.account_id || 'User');
+  const roleName = String((user.role || (user.is_admin ? 'admin' : 'viewer')) || 'viewer').toUpperCase();
+  const role = roleName + ' · ' + String(user.organization_id || user.account_id || '');
+  if(pill){ pill.textContent = name; }
+  if(sbA){ sbA.textContent = name.slice(0,2).toUpperCase(); }
+  if(sbN){ sbN.textContent = name; }
+  if(sbR){ sbR.textContent = role; }
+  if(bIn){ bIn.style.display = 'none'; }
+  if(bReg){ bReg.style.display = 'none'; }
+  if(bForgot){ bForgot.style.display = 'none'; }
+  if(bOut){ bOut.style.display = ''; }
+}
+
+async function refreshAuthState(){
+  const t = getStoredToken();
+  if(!t){
+    if(typeof setAuthVisual === 'function') setAuthVisual(null);
+    return null;
+  }
+  try{
+    const r = await apiFetch('/v1/auth/me');
+    if(!r.ok){
+      clearStoredToken();
+      if(typeof setAuthVisual === 'function') setAuthVisual(null);
+      return null;
+    }
+    const me = await r.json();
+    if(typeof setAuthVisual === 'function') setAuthVisual(me);
+    return me;
+  }catch(_){
+    if(typeof setAuthVisual === 'function') setAuthVisual(null);
+    return null;
+  }
+}
+
+async function authLoginPrompt(){
+  const email = (prompt('Email:','') || '').trim().toLowerCase();
+  if(!email){ return; }
+  const password = (prompt('Password:','') || '');
+  if(!password){ return; }
+  const r = await fetch('/v1/auth/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email: email, password: password})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Login failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  setStoredToken(String(data.token || ''));
+  await refreshAuthState();
+  await loadJobsDashboard();
+}
+
+async function authRegisterPrompt(){
+  const email = (prompt('Register email:','') || '').trim().toLowerCase();
+  if(!email){ return; }
+  const password = (prompt('Create password (min 10 chars):','') || '');
+  if(!password){ return; }
+  const displayName = (prompt('Display name (optional):','') || '').trim();
+  const r = await fetch('/v1/auth/register', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email: email, password: password, display_name: displayName || null})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Register failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  alert('Registration created. Check your email for confirmation link.');
+}
+
+async function authLogout(){
+  try{
+    await apiFetch('/v1/auth/logout', {method:'POST'});
+  }catch(_){}
+  clearStoredToken();
+  checkoutState.jobId=null;
+  checkoutState.quote=null;
+  checkoutState.authorization=null;
+  checkoutState.paymentMethods=[];
+  setAuthVisual(null);
+  await loadJobsDashboard();
+}
+
+async function authForgotPrompt(){
+  const email = (prompt('Password reset for email:','') || '').trim().toLowerCase();
+  if(!email){ return; }
+  const r = await fetch('/v1/auth/password/forgot', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email: email})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Password reset request failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  alert('Password reset email queued. Check mailbox.\n\nDev mode: see data/system/mail_outbox.jsonl');
+}
+
+function downloadBlob(blob, filename){
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = u;
+  a.download = filename || 'download.bin';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u), 1500);
+}
+
+async function downloadInvoicePdf(invoiceId){
+  const r = await apiFetch('/v1/invoices/' + encodeURIComponent(invoiceId) + '/pdf');
+  if(!r.ok){
+    const data = await r.json().catch(()=>({}));
+    throw new Error('PDF download failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  const blob = await r.blob();
+  downloadBlob(blob, invoiceId + '.pdf');
+}
+
+async function exportInvoicesCsv(scope){
+  const r = await apiFetch('/v1/invoices/exports/csv', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({scope: scope})
+  });
+  if(!r.ok){
+    const data = await r.json().catch(()=>({}));
+    throw new Error('CSV export failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  const blob = await r.blob();
+  downloadBlob(blob, 'invoices-' + scope + '.csv');
+}
+
+async function exportInvoicesPdfBulk(scope){
+  const r = await apiFetch('/v1/invoices/exports/pdf-bulk', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({scope: scope})
+  });
+  if(!r.ok){
+    const data = await r.json().catch(()=>({}));
+    throw new Error('Bulk PDF export failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  const blob = await r.blob();
+  downloadBlob(blob, 'invoices-' + scope + '.zip');
+}
+
+async function loadInvoices(){
+  const list = document.getElementById('invoice-list');
+  if(!list){ return; }
+  try{
+    setInvoiceStatus('Loading invoice data from /v1/invoices ...', false);
+    const r = await apiFetch('/v1/invoices');
+    if(r.status === 401){
+      setInvoiceStatus('No API token set. Use the simulation button to store a token, then reopen Invoices.', true);
+      return;
+    }
+    if(!r.ok){
+      const data = await r.json().catch(()=>({}));
+      setInvoiceStatus('Invoice load failed: HTTP ' + r.status + ' ' + (data.detail || ''), true);
+      return;
+    }
+    const data = await r.json();
+    const rows = Array.isArray(data.invoices) ? data.invoices : [];
+    if(rows.length === 0){
+      list.innerHTML = '<div class="inv-item"><div class="inv-num">No invoices yet</div><div class="inv-date">-</div><div class="inv-desc">No settled billed jobs found for this account.</div><div class="inv-amt">$0.00</div><span class="inv-draft">Draft</span></div>';
+      setInvoiceStatus('Live invoice mode active. 0 invoices generated from current job ledger.', false);
+      return;
+    }
+    list.innerHTML = rows.map(function(inv){
+      const isPaid = String(inv.status || '').toUpperCase() === 'PAID';
+      const badge = isPaid ? '<span class="inv-paid">Paid</span>' : '<span class="inv-draft">Draft</span>';
+      const desc = escHtml((inv.job_count || 0) + ' billed jobs');
+      return '' +
+      '<div class="inv-item">' +
+        '<div class="inv-num">' + escHtml(inv.invoice_id) + '</div>' +
+        '<div class="inv-date">' + escHtml(fmtDate(inv.period_end)) + '</div>' +
+        '<div class="inv-desc">' + escHtml(inv.period_key || '') + ' · ' + desc + '</div>' +
+        '<div class="inv-amt">' + escHtml(fmtUsd(inv.amount_total)) + '</div>' +
+        badge +
+        '<div class="flex gap8" style="margin-left:8px">' +
+          '<div class="icon-btn" title="Download invoice PDF" onclick="downloadInvoicePdf(\'' + escHtml(inv.invoice_id) + '\')">' +
+            '<svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 1.5h4.5L10 4v7a1 1 0 01-1 1H3a1 1 0 01-1-1V2.5a1 1 0 011-1z"/><path d="M7.5 1.5v3H11"/></svg>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    setInvoiceStatus('Live invoice mode active. Loaded ' + rows.length + ' invoices from /v1/invoices.', false);
+  }catch(err){
+    setInvoiceStatus('Invoice load error: ' + err, true);
+  }
+}
+
+function wireInvoiceButtons(){
+  const bAll = document.getElementById('btn-export-csv-all');
+  const bMonth = document.getElementById('btn-export-csv-month');
+  const bBulk = document.getElementById('btn-export-pdf-bulk');
+  if(bAll){
+    bAll.onclick = async function(){
+      try{ await exportInvoicesCsv('all'); }catch(err){ alert(String(err)); }
+    };
+  }
+  if(bMonth){
+    bMonth.onclick = async function(){
+      try{ await exportInvoicesCsv('current_month'); }catch(err){ alert(String(err)); }
+    };
+  }
+  if(bBulk){
+    bBulk.onclick = async function(){
+      try{ await exportInvoicesPdfBulk('all'); }catch(err){ alert(String(err)); }
+    };
+  }
+}
+
+function parseExpiryParts(raw){
+  const s=String(raw || '').trim();
+  const m=s.match(/^(\d{2})\s*\/\s*(\d{2}|\d{4})$/);
+  if(!m){ return {month:null, year:null}; }
+  const month=Number(m[1]);
+  let year=Number(m[2]);
+  if(year < 100){ year = 2000 + year; }
+  if(month < 1 || month > 12){ return {month:null, year:null}; }
+  return {month:month, year:year};
+}
+
+function renderPaymentMethods(items){
+  const host=document.getElementById('payment-method-list');
+  if(!host){ return; }
+  const rows=Array.isArray(items) ? items : [];
+  if(rows.length === 0){
+    host.innerHTML='<div class="mono" style="font-size:.62rem;color:var(--td)">No saved payment methods yet.</div>';
+    return;
+  }
+  host.innerHTML=rows.map(function(pm){
+    const provider=String(pm.provider || 'card');
+    const last4=pm.last4 ? (' ···· ' + String(pm.last4)) : '';
+    const brand=String(pm.brand || provider);
+    const exp=(pm.exp_month && pm.exp_year) ? ('Expires ' + String(pm.exp_month).padStart(2,'0') + '/' + String(pm.exp_year)) : 'No expiry stored';
+    const def=pm.is_default ? ' · Default' : '';
+    return '' +
+      '<div class="file-item" style="margin-top:6px">' +
+        '<div class="fi-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="var(--tm)" stroke-width="1.3"><rect x="1" y="3" width="13" height="9" rx="2"/><path d="M1 7h13"/></svg></div>' +
+        '<div><div class="fi-name">' + escHtml(brand + last4) + '</div><div class="fi-meta">' + escHtml(exp + def) + '</div></div>' +
+      '</div>';
+  }).join('');
+}
+
+async function loadPaymentMethods(){
+  const r=await apiFetch('/v1/billing/payment-methods');
+  if(!r.ok){
+    const data=await r.json().catch(()=>({}));
+    throw new Error('Payment methods load failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  const data=await r.json().catch(()=>({}));
+  const methods=Array.isArray(data.payment_methods) ? data.payment_methods : [];
+  checkoutState.paymentMethods=methods;
+  renderPaymentMethods(methods);
+}
+
+function checkoutRateHint(profile){
+  const p=String(profile || currentProfile).toLowerCase();
+  if(p === 'quick'){ return 0.000085; }
+  if(p === 'precise'){ return 0.000245; }
+  return 0.000095;
+}
+
+function applyQuoteToCheckout(quote){
+  if(!quote){ return; }
+  const set=function(id,v){ const el=document.getElementById(id); if(el){ el.textContent=v; } };
+  const subtotal=Number(quote.estimate_subtotal || 0);
+  const tax=Number(quote.tax || 0);
+  const total=Number(quote.estimate_total || 0);
+  const cap=Number(quote.cap_amount || total);
+  const n=Math.max(1, Number(quote.n_toys || currentNtoysValue()));
+  const pb=quote.pricing_breakdown || {};
+  const ratePer100k=Number(pb.rate_per_100k_toys || 0);
+  const ratePerToy=(ratePer100k > 0) ? (ratePer100k / 100000) : (subtotal / n);
+  const baseFee=Number(pb.base_fee_usd || 0);
+  set('co-job', uploadDatasetName());
+  set('co-profile', profileDisplayLabel(quote.profile));
+  set('co-ntoys', n.toLocaleString());
+  set('co-rate', fmtRatePerMillionFromPerToy(ratePerToy) + (baseFee > 0 ? (' + $' + baseFee.toFixed(2) + ' base') : ''));
+  set('co-subtotal', fmtUsd(subtotal));
+  set('co-tax', fmtUsd(tax));
+  set('co-total', fmtUsd(total));
+  const estRate=document.getElementById('est-rate');
+  if(estRate){ estRate.textContent='x ' + fmtRatePerMillionFromPerToy(ratePerToy) + (baseFee > 0 ? (' + $' + baseFee.toFixed(2) + ' base') : ''); }
+  document.getElementById('est-total').textContent=fmtUsd(total);
+  document.getElementById('est-cap').textContent=fmtUsd(cap);
+  document.getElementById('cta-price').textContent=fmtUsd(total);
+  const launch=document.getElementById('checkout-launch-label');
+  if(launch){ launch.textContent='Pay ' + fmtUsd(total) + ' · Launch Job'; }
+}
+
+async function ensureCheckoutJob(){
+  if(checkoutState.jobId){ return checkoutState.jobId; }
+  if(selectedUploadFile()){
+    setUploadStatus('Submitting selected dataset...', false);
+    const created=await submitNewJobDraft();
+    setUploadStatus('Job draft created: ' + String(created.job_id || ''), false);
+    return checkoutState.jobId;
+  }
+  console.log('ensureCheckoutJob polling for draft');
+  const rJobs=await apiFetch('/v1/jobs?limit=50');
+  if(!rJobs.ok){
+    const data=await rJobs.json().catch(()=>({}));
+    throw new Error('Job lookup failed: HTTP ' + rJobs.status + ' ' + (data.detail || ''));
+  }
+  const jobsData=await rJobs.json().catch(()=>({}));
+  const jobs=Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
+  const candidate=jobs.find(function(j){
+    const s=String(j.status || '').toUpperCase();
+    return s === 'RECEIVED';
+  });
+  if(candidate && candidate.job_id){
+    checkoutState.jobId=String(candidate.job_id);
+    return checkoutState.jobId;
+  }
+  throw new Error('No draft job available. Create one in New Job first.');
+}
+
+async function refreshCheckoutQuote(){
+  const profile=String(currentProfile || 'standard');
+  const nToys=currentNtoysValue();
+  const scanCfg=currentScanConfig();
+  rate=checkoutRateHint(profile);
+  const r=await apiFetch('/v1/pricing/quote', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({profile: profile, n_toys: nToys, scan: scanCfg, currency:'USD', country_code:'US'})
+  });
+  if(!r.ok){
+    const data=await r.json().catch(()=>({}));
+    throw new Error('Pricing quote failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  const quote=await r.json();
+  checkoutState.quote=quote;
+  applyQuoteToCheckout(quote);
+  return quote;
+}
+
+async function maybeCreatePaymentMethod(){
+  const provider=String(selectedPayProvider || 'card');
+  const existing=(checkoutState.paymentMethods || []).find(function(x){
+    return String(x.provider || '') === provider;
+  });
+  if(existing){ return existing; }
+  if(!['card','paypal','google_pay','invoice'].includes(provider)){ return null; }
+
+  const number=String((document.getElementById('pm-card-number') || {}).value || '').replace(/\s+/g,'');
+  const last4=number.length >= 4 ? number.slice(-4) : '';
+  const exp=parseExpiryParts((document.getElementById('pm-expiry') || {}).value || '');
+  const payload={
+    provider: provider,
+    brand: provider === 'card' ? 'Visa' : provider,
+    last4: provider === 'card' ? last4 : null,
+    exp_month: provider === 'card' ? exp.month : null,
+    exp_year: provider === 'card' ? exp.year : null,
+    is_default: true
+  };
+  const r=await apiFetch('/v1/billing/payment-methods', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok){
+    throw new Error('Save payment method failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+  }
+  await loadPaymentMethods();
+  return data.payment_method || null;
+}
+
+async function launchCheckout(){
+  console.log('launchCheckout start, isSubmitting=', window.isSubmitting);
+  if(window.isSubmitting){
+    console.warn('launchCheckout called while already submitting');
+    return;
+  }
+  window.isSubmitting = true;
+  const btn=document.getElementById('btn-checkout-launch');
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
+  try{
+    setCheckoutStatus('Preparing checkout job and quote...', false);
+    const jobId=await ensureCheckoutJob();
+    console.log('launchCheckout got jobId', jobId);
+    const quote=(checkoutState.quote && checkoutState.quote.quote_id) ? checkoutState.quote : await refreshCheckoutQuote();
+    console.log('launchCheckout got quote', quote);
+    await maybeCreatePaymentMethod();
+    const provider=CHECKOUT_PROVIDER_MAP[String(selectedPayProvider || 'card')] || 'mock';
+    const idempotency='checkout_' + Date.now() + '_' + Math.random().toString(16).slice(2,10);
+    console.log('about to authorize', {quote_id: quote.quote_id, provider, job_id: jobId, idempotency});
+    const rAuth=await apiFetch('/v1/billing/authorize', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Idempotency-Key': idempotency
+      },
+      body: JSON.stringify({quote_id: quote.quote_id, provider: provider, job_id: jobId})
+    });
+    console.log('authorize response', rAuth.status);
+    const auth=await rAuth.json().catch(()=>({}));
+    if(!rAuth.ok){
+      throw new Error('Authorization failed: HTTP ' + rAuth.status + ' ' + (auth.detail || ''));
+    }
+    checkoutState.authorization=auth;
+
+    console.log('CONFIRM request payload', {jobId, authorization_id: auth.authorization_id});
+    const rConfirm=await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/checkout/confirm', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({authorization_id: auth.authorization_id})
+    });
+    const confirm=await rConfirm.json().catch(()=>({}));
+    console.log('CONFIRM response', rConfirm.status, confirm);
+    if(rConfirm.status === 404){
+      console.warn('CONFIRM 404 encountered for', '/v1/jobs/' + jobId + '/checkout/confirm');
+    }
+    if(!rConfirm.ok){
+      throw new Error('Checkout confirm failed: HTTP ' + rConfirm.status + ' ' + (confirm.detail || ''));
+    }
+    const queuedTxt=confirm.queued ? 'queued' : 'not queued yet';
+    setCheckoutStatus('Checkout complete for ' + jobId + ' (' + queuedTxt + ').', false);
+    await loadJobsDashboard();
+    nav(null,'jobs');
+  }catch(err){
+    setCheckoutStatus(String(err), true);
+  }finally{
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+    window.isSubmitting = false;
+  }
+}
+
+async function loadCheckoutPanel(){
+  if(window.loadCheckoutBusy){
+    return;
+  }
+  window.loadCheckoutBusy = true;
+  try{
+    if(!getStoredToken()){
+      setCheckoutStatus('Please sign in first to use live checkout.', true);
+      return;
+    }
+    setCheckoutStatus('Loading live checkout data...', false);
+    refreshCheckoutSummaryFromEstimate();
+    await Promise.all([loadPaymentMethods(), refreshCheckoutQuote(), ensureCheckoutJob()]);
+    setCheckoutStatus('Live checkout ready for job ' + checkoutState.jobId + '.', false);
+  }catch(err){
+    setCheckoutStatus(String(err), true);
+  }finally{
+    window.loadCheckoutBusy = false;
+  }
+}
+
+async function createUploadDraft(goCheckout){
+  try{
+    setUploadStatus('Submitting new job...', false);
+    const data=await submitNewJobDraft();
+    setUploadStatus('Job draft created: ' + String(data.job_id || '') + ' · billing=' + String(data.billing_status || 'unknown'), false);
+    await loadJobsDashboard();
+    if(goCheckout){
+      nav(null,'checkout');
+      await loadCheckoutPanel();
+    }
+  }catch(err){
+    setUploadStatus(String(err), true);
+  }
+}
+
+function setResultsStatus(msg,isErr){
+  const el=document.getElementById('results-status');
+  if(!el){ return; }
+  el.textContent=String(msg || '');
+  el.style.color=isErr?'var(--red)':'var(--td)';
+}
+
+function fmtPercent(val){
+  const n=Number(val);
+  if(!isFinite(n)){ return 'n/a'; }
+  return n.toFixed(1) + '%';
+}
+
+function fmtPValue(val){
+  const n=Number(val);
+  if(!isFinite(n)){ return 'n/a'; }
+  if(n === 0){ return '0'; }
+  if(Math.abs(n) < 0.001){ return n.toExponential(3); }
+  return n.toFixed(6);
+}
+function relRow(label,val,color){
+  const hasVal = (val != null && isFinite(val));
+  const pctTxt = hasVal ? fmtPercent(val) : 'n/a';
+  const w = hasVal ? Math.max(0,Math.min(100,val)) : 0;
+  const fillColor = hasVal ? color : 'var(--line2)';
+  return '<div class="gb-row"><div class="gb-lbl">' + escHtml(label) + '</div><div class="gb-track"><div class="gb-fill" style="width:' + w + '%;background:' + fillColor + '"></div></div><div class="gb-pct">' + escHtml(pctTxt) + '</div></div>';
+}
+
+function statusHuman(status){
+  const s=String(status || '').toUpperCase();
+  if(s === 'DONE'){ return 'Complete'; }
+  if(s === 'RUNNING'){ return 'Running'; }
+  if(s === 'RECEIVED'){ return 'Queued'; }
+  if(s === 'ERROR'){ return 'Failed'; }
+  if(s === 'TIMEOUT'){ return 'Timed out'; }
+  if(s === 'INTERRUPTED'){ return 'Cancelled'; }
+  return s || 'Unknown';
+}
+
+function statusChipMini(status){
+  const s=String(status || '').toUpperCase();
+  if(s === 'DONE'){ return '<span class="chip done">&#10003; Complete</span>'; }
+  if(s === 'RUNNING'){ return '<span class="chip run"><div class="livepulse" style="width:5px;height:5px;"></div>Running</span>'; }
+  if(s === 'RECEIVED'){ return '<span class="chip queued">&#9203; Queued</span>'; }
+  if(s === 'INTERRUPTED'){ return '<span class="chip fail">&#10007; Cancelled</span>'; }
+  if(s === 'TIMEOUT'){ return '<span class="chip fail">&#10007; Timed out</span>'; }
+  return '<span class="chip fail">&#10007; Failed</span>';
+}
+
+function resultsTabHtml(job,isActive){
+  const activeStyle=isActive?'color:var(--teal);border-bottom:2px solid var(--teal);':'color:var(--td);border-bottom:2px solid transparent;';
+  const label=String(job.job_id || 'job') + ' · ' + String(job.dataset_name || 'dataset');
+  return '<button onclick="selectResultsJob(\'' + escHtml(String(job.job_id || '')) + '\')" style="padding:9px 18px;font-family:var(--mono);font-size:.65rem;font-weight:500;letter-spacing:.1em;border:none;background:none;cursor:pointer;margin-bottom:-1px;text-transform:uppercase;' + activeStyle + '">' + escHtml(label) + '</button>';
+}
+
+function buildResultsContent(job,statusData,trustData,resultsData,proofData){
+  const statusNow=String(statusData.status || '').toUpperCase();
+  const rel=trustData && trustData.reliability ? trustData.reliability : (statusData.reliability || {});
+  const scoreRaw = (rel.score != null ? rel.score : rel.overall_score);
+  const score = (scoreRaw == null ? null : Number(scoreRaw));
+  const grade=String(rel.grade || (isFinite(score) ? (score >= 95 ? 'A' : score >= 85 ? 'B' : score >= 70 ? 'C' : 'D') : 'n/a'));
+  const stabilityRaw = (rel.numerical_stability_pct != null ? rel.numerical_stability_pct : rel.numerical_stability);
+  const convergenceRaw = (rel.convergence_pct != null ? rel.convergence_pct : rel.convergence);
+  const bitrepRaw = (rel.bit_reproducible_pct != null ? rel.bit_reproducible_pct : rel.bit_reproducible);
+  const coverageRaw = (rel.coverage_test_pct != null ? rel.coverage_test_pct : rel.coverage);
+  const stability = (stabilityRaw == null ? null : Number(stabilityRaw));
+  const convergence = (convergenceRaw == null ? null : Number(convergenceRaw));
+  const bitrep = (bitrepRaw == null ? null : Number(bitrepRaw));
+  const coverage = (coverageRaw == null ? null : Number(coverageRaw));
+  const ev=(trustData && trustData.evidence) ? trustData.evidence : {};
+  const proof=(proofData && proofData.summary ? proofData.summary : (ev.calculation_proof || {}));
+  const proofHash=String(proof.payload_sha256 || 'Not available yet');
+  const sigAlg=String(proof.signature_algorithm || 'n/a');
+  const keyId=String(proof.key_id || 'n/a');
+  const rp=statusData.run_provenance || {};
+  const compute=statusData.compute || {};
+  const profile=String(compute.kernel_profile || rp.kernel_profile || job.profile || 'standard');
+  const nToys=String(rp.requested_n_toys || job.n_toys || 'n/a');
+  const datasetSha=String(rp.dataset_sha256 || ((statusData.hashkeys || {}).raw_input_hashkey || 'n/a'));
+  const artifacts=statusData.artifacts || {};
+  const resultLinks=(resultsData && resultsData.artifact_links) ? resultsData.artifact_links : {};
+  const signalTracking=(resultsData && resultsData.signal_tracking) ? resultsData.signal_tracking : null;
+  const topWindows=((resultsData && resultsData.summary && Array.isArray(resultsData.summary.top_windows)) ? resultsData.summary.top_windows : []);
+  const notes=((resultsData && Array.isArray(resultsData.notes)) ? resultsData.notes : ((trustData && trustData.evidence && Array.isArray(trustData.evidence.notes)) ? trustData.evidence.notes : []));
+  const relReason = String(rel.reason || '');
+  const relSignalP = rel.signal_p;
+  const relSignalTh = rel.signal_threshold_p;
+  const mergedArtifactMap={};
+  ['results_csv','manifest','calculation_proof','signal_tracking_manifest','signal_tracking_results_csv'].forEach(function(k){
+    if(resultLinks[k]){ mergedArtifactMap[k]=resultLinks[k]; }
+    if(artifacts[k]){ mergedArtifactMap[k]=artifacts[k]; }
+  });
+  if(proofData && proofData.proof_url){ mergedArtifactMap.proof = proofData.proof_url; }
+  const artRows=[];
+  if(mergedArtifactMap.results_csv){ artRows.push({name:'results.csv',url:mergedArtifactMap.results_csv,desc:'Signal candidates and summary table'}); }
+  if(mergedArtifactMap.manifest){ artRows.push({name:'manifest.json',url:mergedArtifactMap.manifest,desc:'Execution and summary manifest'}); }
+  if(mergedArtifactMap.calculation_proof || mergedArtifactMap.proof){ artRows.push({name:'calculation_proof.json',url:(mergedArtifactMap.calculation_proof || mergedArtifactMap.proof),desc:'Signed proof payload'}); }
+  if(mergedArtifactMap.signal_tracking_manifest){ artRows.push({name:'signal_tracking_manifest.json',url:mergedArtifactMap.signal_tracking_manifest,desc:'Signal tracking hits and config hash'}); }
+  if(mergedArtifactMap.signal_tracking_results_csv){ artRows.push({name:'signal_tracking_results.csv',url:mergedArtifactMap.signal_tracking_results_csv,desc:'Signal tracking full hit table'}); }
+  if(artRows.length === 0){
+    artRows.push({name:'No artifacts yet',url:null,desc:(statusNow === 'DONE' ? 'Artifacts missing for completed job.' : 'Artifacts are produced after execution completes.')});
+  }
+  const artHtml=artRows.map(function(a){
+    if(!a.url){
+      return '<button class="dl-btn" disabled style="opacity:.5;cursor:not-allowed"><div><div class="dl-nm">' + escHtml(a.name) + '</div><div class="dl-sz">' + escHtml(a.desc) + '</div></div></button>';
+    }
+    return '<button class="dl-btn" onclick="downloadResultArtifact(\'' + escHtml(String(job.job_id || '')) + '\',\'' + escHtml(String(a.url)) + '\')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke=\"currentColor\" stroke-width=\"1.3\"><path d=\"M6.5 2v7M3.5 7l3 3 3-3\"/><path d=\"M2 11h9\"/></svg><div><div class="dl-nm">' + escHtml(a.name) + '</div><div class="dl-sz">' + escHtml(a.desc) + '</div></div><span style="margin-left:auto">&#8595;</span></button>';
+  }).join('');
+  const runSummary = '' +
+    '<div class="ti" style="grid-column:1/-1">' +
+      '<div class="ti-hd"><div class="ti-ico ic-a"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 7.5A5 5 0 0112 5M12 5V2.5M12 5H9.5"/><path d="M12.5 7.5A5 5 0 013 10M3 10v2.5M3 10h2.5"/></svg></div><div><div class="ti-title">Run Snapshot</div><div class="ti-sub">' + statusChipMini(statusNow) + '</div></div></div>' +
+      '<div class="cfg"><span class="ck">job_id:</span> <span class="cv">' + escHtml(String(job.job_id || '')) + '</span><br>' +
+      '<span class="ck">dataset:</span> <span class="cv">' + escHtml(String(job.dataset_name || 'n/a')) + '</span><br>' +
+      '<span class="ck">profile:</span> <span class="cv">' + escHtml(profile) + '</span><br>' +
+      '<span class="ck">n_toys:</span> <span class="cv">' + escHtml(String(nToys)) + '</span><br>' +
+      '<span class="ck">status:</span> <span class="cv">' + escHtml(statusHuman(statusNow)) + '</span><br>' +
+      '<span class="ck">updated:</span> <span class="cv">' + escHtml(fmtUtc(statusData.updated_at || job.updated_at || 0)) + '</span></div>' +
+    '</div>';
+
+  const resultsSummaryCard = '' +
+    '<div class="ti">' +
+      '<div class="ti-hd"><div class="ti-ico ic-g"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 12h11M3.5 10V6M7.5 10V4M11.5 10V7"/></svg></div><div><div class="ti-title">Result Summary</div><div class="ti-sub">From /results</div></div></div>' +
+      (resultsData && resultsData.summary
+        ? ('<div class="cfg"><span class="ck">windows_scanned:</span> <span class="cv">' + escHtml(String(resultsData.summary.windows_scanned || 'n/a')) + '</span><br>' +
+           '<span class="ck">min_p:</span> <span class="cv">' + escHtml(fmtPValue(resultsData.summary.min_p)) + '</span><br>' +
+           '<span class="ck">median_p:</span> <span class="cv">' + escHtml(fmtPValue(resultsData.summary.median_p)) + '</span><br>' +
+           '<span class="ck">toys_completed:</span> <span class="cv">' + escHtml(String(resultsData.toys_completed == null ? 'n/a' : resultsData.toys_completed)) + '</span></div>')
+        : '<div class="mono" style="font-size:.62rem;color:var(--td)">No statistical summary available yet.</div>') +
+      (topWindows.length > 0
+        ? ('<div class="divider"></div><div class="mono" style="font-size:.62rem;color:var(--td);margin-bottom:6px">Top windows</div>' +
+           topWindows.slice(0, 4).map(function(w){
+             const rng = Array.isArray(w.range) ? (String(w.range[0]) + ' - ' + String(w.range[1])) : 'n/a';
+             return '<div class="gb-row"><div class="gb-lbl">' + escHtml(rng) + '</div><div class="gb-track"><div class="gb-fill" style="width:' + Math.max(2, Math.min(100, 100 * (1.0 - Number(w.p || 1)))) + '%;background:var(--teal)"></div></div><div class="gb-pct">p=' + escHtml(fmtPValue(w.p)) + '</div></div>';
+           }).join(''))
+        : '') +
+    '</div>';
+
+  const signalCard = '' +
+    '<div class="ti">' +
+      '<div class="ti-hd"><div class="ti-ico ic-p"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8h2l1.2-2.8L7 11l1.8-4h1.6l.6 1H13"/></svg></div><div><div class="ti-title">Signal Tracking</div><div class="ti-sub">Kernel output summary</div></div></div>' +
+      (signalTracking
+        ? ('<div class="cfg"><span class="ck">window_pack_id:</span> <span class="cv">' + escHtml(String(signalTracking.window_pack_id || 'n/a')) + '</span><br>' +
+           '<span class="ck">reliable_hits:</span> <span class="cv">' + escHtml(String(signalTracking.reliable_hits_count || 0)) + '</span><br>' +
+           '<span class="ck">edge_hits:</span> <span class="cv">' + escHtml(String(signalTracking.edge_hits_count || 0)) + '</span></div>')
+        : '<div class="mono" style="font-size:.62rem;color:var(--td)">No signal-tracking summary available.</div>') +
+      (notes.length > 0
+        ? ('<div class="divider"></div><div class="mono" style="font-size:.62rem;color:var(--td);margin-bottom:6px">Notes</div>' +
+           notes.slice(0, 4).map(function(n){ return '<div class="mono" style="font-size:.6rem;color:var(--tm);margin-bottom:4px">• ' + escHtml(String(n)) + '</div>'; }).join(''))
+        : '') +
+    '</div>';
+
+  return '' +
+    '<div class="trust-grid">' +
+      runSummary +
+      '<div class="ti">' +
+        '<div class="ti-hd"><div class="ti-ico ic-g"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7.5 2l1.4 4H13l-3.5 2.5 1.3 4L7.5 10l-3.3 2.5 1.3-4L2 6h4.1L7.5 2z"/></svg></div><div><div class="ti-title">Reliability Score</div><div class="ti-sub">Live trust report</div></div></div>' +
+        '<div class="flex gap8" style="align-items:flex-end;margin-bottom:10px"><div class="grade-ltr">' + escHtml(grade) + '</div><div class="grade-score">Score: <strong>' + (score != null && isFinite(score) ? score.toFixed(1) : 'n/a') + '</strong>/100</div></div>' +
+        relRow('Num. stability', stability, 'var(--green)') +
+        relRow('Convergence', convergence, 'var(--green)') +
+        relRow('Bit-reproducible', bitrep, 'var(--green)') +
+        relRow('Coverage test', coverage, 'var(--teal)') +
+        (relReason ? ('<div class="mono" style="font-size:.6rem;color:var(--tm);margin-top:8px">Reason: ' + escHtml(relReason) + '</div>') : '') +
+        ((relSignalP != null || relSignalTh != null) ? ('<div class="mono" style="font-size:.6rem;color:var(--td);margin-top:4px">Signal p=' + escHtml(fmtPValue(relSignalP)) + ' · threshold=' + escHtml(fmtPValue(relSignalTh)) + '</div>') : '') +
+      '</div>' +
+      '<div class="ti">' +
+        '<div class="ti-hd"><div class="ti-ico ic-t"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7.5 2l4 2v4c0 2.5-1.8 4.5-4 5.5C5.3 12.5 3.5 10.5 3.5 8V4l4-2z"/></svg></div><div><div class="ti-title">Tamper-Evident Proof</div><div class="ti-sub">' + escHtml(sigAlg) + ' · key ' + escHtml(keyId) + '</div></div></div>' +
+        '<div class="hash-lbl">Proof Hash (SHA-256)</div><div class="hash-blk">' + escHtml(proofHash) + '</div>' +
+        '<button class="copy-btn" onclick="navigator.clipboard && navigator.clipboard.writeText(\'' + escHtml(proofHash) + '\');this.textContent=\'&#10003; Copied!\'"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="3" width="6" height="7" rx="1"/><path d="M3 1h6a1 1 0 011 1v7"/></svg>Copy hash for independent verification</button>' +
+      '</div>' +
+      '<div class="ti"><div class="ti-hd"><div class="ti-ico ic-a"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 12l3-4 3 2 3-6"/></svg></div><div><div class="ti-title">Result Artifacts</div><div class="ti-sub">Live artifact links</div></div></div>' + artHtml +
+      '<div class="divider"></div><div class="flex gap8" style="flex-wrap:wrap"><button class="export-btn" onclick="downloadJob(\'' + escHtml(String(job.job_id || '')) + '\')">Download primary CSV</button><button class="export-btn" onclick="downloadTrustReport(\'' + escHtml(String(job.job_id || '')) + '\')">Download trust report JSON</button></div></div>' +
+      resultsSummaryCard +
+      signalCard +
+      '<div class="ti">' +
+        '<div class="ti-hd"><div class="ti-ico ic-p"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 7.5A5 5 0 0112 5M12 5V2.5M12 5H9.5"/><path d="M12.5 7.5A5 5 0 013 10M3 10v2.5M3 10h2.5"/></svg></div><div><div class="ti-title">Reproduce / Re-run</div><div class="ti-sub">Immutable config snapshot</div></div></div>' +
+        '<div class="cfg-immut"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="4.5" width="8" height="5.5" rx="1"/><path d="M3 4.5V3.5a2 2 0 014 0V4.5"/></svg>Config locked · snapshot live</div>' +
+        '<div class="cfg"><span class="ck">profile:</span> <span class="cv">"' + escHtml(profile) + '"</span><br><span class="ck">n_toys:</span> <span class="cv">' + escHtml(String(nToys)) + '</span><br><span class="ck">dataset_sha256:</span> <span class="cv">' + escHtml(datasetSha) + '</span><br><span class="ck">status:</span> <span class="cv">' + escHtml(String(statusData.status || '')) + '</span></div>' +
+        '<button class="outline-btn" onclick="rerunJob(\'' + escHtml(String(job.job_id || '')) + '\')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 6.5A4.5 4.5 0 0111 4M11 4V1.5M11 4H8.5"/></svg>Run again with same config</button>' +
+      '</div>' +
+    '</div>';
+}
+
+async function downloadResultArtifact(jobId,urlPath){
+  const r=await apiFetch(String(urlPath || ''));
+  if(!r.ok){
+    const data=await r.json().catch(()=>({}));
+    alert('Artifact download failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  const blob=await r.blob();
+  const fn=(String(urlPath).split('/').pop() || (jobId + '-artifact.bin'));
+  downloadBlob(blob, fn);
+}
+
+async function downloadTrustReport(jobId){
+  if(!jobId){ return; }
+  const r=await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/trust-report?view=internal');
+  const data=await r.json().catch(()=>null);
+  if(!r.ok || !data){
+    alert('Trust report download failed: HTTP ' + r.status + ' ' + ((data && data.detail) || ''));
+    return;
+  }
+  const blob=new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  downloadBlob(blob, jobId + '-trust-report.json');
+}
+
+async function selectResultsJob(jobId){
+  selectedResultsJobId=String(jobId || '');
+  await loadResultsPanel();
+}
+
+async function loadResultsPanel(){
+  const tabs=document.getElementById('results-tabs');
+  const content=document.getElementById('results-content');
+  if(!tabs || !content){ return; }
+  try{
+    setResultsStatus('Loading jobs and trust artifacts...', false);
+    const rJobs=await apiFetch('/v1/jobs?limit=25');
+    if(rJobs.status === 401){
+      setResultsStatus('Please sign in to view live results.', true);
+      return;
+    }
+    if(!rJobs.ok){
+      const err=await rJobs.json().catch(()=>({}));
+      setResultsStatus('Results load failed: HTTP ' + rJobs.status + ' ' + (err.detail || ''), true);
+      return;
+    }
+    const jobsData=await rJobs.json();
+    const jobs=Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
+    const eligible=jobs.filter(function(j){ return ['DONE','ERROR','TIMEOUT','INTERRUPTED','RUNNING','RECEIVED'].includes(String(j.status || '').toUpperCase()); });
+    if(eligible.length === 0){
+      tabs.innerHTML='';
+      content.innerHTML='';
+      setResultsStatus('No jobs available yet.', false);
+      return;
+    }
+    if(!selectedResultsJobId || !eligible.some(function(x){ return String(x.job_id) === String(selectedResultsJobId); })){
+      const done=eligible.find(function(j){ return String(j.status || '').toUpperCase() === 'DONE'; });
+      selectedResultsJobId=String((done || eligible[0]).job_id || '');
+    }
+    tabs.innerHTML=eligible.slice(0,6).map(function(j){ return resultsTabHtml(j, String(j.job_id)===String(selectedResultsJobId)); }).join('');
+    const selected=eligible.find(function(j){ return String(j.job_id)===String(selectedResultsJobId); }) || eligible[0];
+    const jobId=String(selected.job_id || '');
+    const [rStatus, rTrust, rRes, rProof]=await Promise.all([
+      apiFetch('/v1/jobs/' + encodeURIComponent(jobId)),
+      apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/trust-report?view=internal'),
+      apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/results'),
+      apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/proof')
+    ]);
+    if(!rStatus.ok){
+      const err=await rStatus.json().catch(()=>({}));
+      setResultsStatus('Status fetch failed: HTTP ' + rStatus.status + ' ' + (err.detail || ''), true);
+      return;
+    }
+    const statusData=await rStatus.json();
+    let trustData=null;
+    if(rTrust.ok){ trustData=await rTrust.json().catch(()=>null); }
+    let resultsData=null;
+    if(rRes.ok){ resultsData=await rRes.json().catch(()=>null); }
+    let proofData=null;
+    if(rProof.ok){ proofData=await rProof.json().catch(()=>null); }
+    content.innerHTML=buildResultsContent(selected,statusData,trustData,resultsData,proofData);
+    setResultsStatus('Live results view for ' + jobId + ' (' + String(statusData.status || '') + ').', false);
+  }catch(err){
+    setResultsStatus('Results load error: ' + err, true);
+  }
+}
+
+function profileTagClass(profile){
+  const p = String(profile || '').toLowerCase();
+  if(p === 'quick') return 'a';
+  if(p === 'precise') return 'p';
+  return 't';
+}
+
+function statusChip(statusLabel, statusRaw){
+  const s = String(statusRaw || '').toUpperCase();
+  if(s === 'RUNNING') return '<span class="chip run"><div class="livepulse" style="width:5px;height:5px;"></div>' + escHtml(statusLabel) + '</span>';
+  if(s === 'RECEIVED') return '<span class="chip queued">&#9203; ' + escHtml(statusLabel) + '</span>';
+  if(s === 'DONE') return '<span class="chip done">&#10003; ' + escHtml(statusLabel) + '</span>';
+  return '<span class="chip fail">&#10007; ' + escHtml(statusLabel) + '</span>';
+}
+
+function fmtEta(eta){
+  if(eta === null || eta === undefined){ return '—'; }
+  const n = Number(eta);
+  if(!isFinite(n)){ return '—'; }
+  return '~' + Math.max(0, Math.round(n)) + ' min';
+}
+
+function fmtUtc(ts){
+  const n = Number(ts || 0);
+  if(!isFinite(n) || n <= 0){ return 'n/a'; }
+  try{
+    const d = new Date(n * 1000);
+    return d.toLocaleTimeString('en-GB', {hour12:false, timeZone:'UTC'}) + ' UTC';
+  }catch(_){
+    return 'n/a';
+  }
+}
+
+function fmtDateTimeUtc(ts){
+  const n = Number(ts || 0);
+  if(!isFinite(n) || n <= 0){ return 'n/a'; }
+  try{
+    const d = new Date(n * 1000);
+    const date = d.toLocaleDateString('en-CA', {timeZone:'UTC'});
+    const time = d.toLocaleTimeString('en-GB', {hour12:false, timeZone:'UTC'});
+    return date + ' ' + time + ' UTC';
+  }catch(_){
+    return 'n/a';
+  }
+}
+
+async function enrichSpotlightWithTelemetry(spot){
+  if(!spot || !spot.job_id){ return spot; }
+  try{
+    const r = await apiFetch('/v1/jobs/' + encodeURIComponent(String(spot.job_id)) + '/telemetry');
+    if(!r.ok){ return spot; }
+    const t = await r.json().catch(()=>null);
+    if(!t){ return spot; }
+    return Object.assign({}, spot, {
+      eta: t.eta_minutes,
+      eta_source: t.eta_source,
+      gpu_utilization_pct: t.gpu_utilization_pct,
+      gpu_telemetry_available: t.gpu_telemetry_available,
+      kernel_runtime_seconds: t.kernel_runtime_seconds,
+      kernel_avg_time_ms: t.kernel_avg_time_ms,
+      kernel_avg_power_w: t.kernel_avg_power_w,
+      kernel_est_gflops: t.kernel_est_gflops,
+      kernel_backend_mode: t.kernel_backend_mode,
+      kernel_profile_measured: t.kernel_profile,
+      kernel_telemetry_available: t.kernel_telemetry_available,
+      cost_accrued: t.cost_accrued_usd,
+      cost_telemetry_available: t.cost_telemetry_available,
+      telemetry_generated_at: t.generated_at,
+      telemetry_usage: t.usage || null
+    });
+  }catch(_err){
+    return spot;
+  }
+}
+
+async function fetchJobTimeline(jobId){
+  if(!jobId){ return null; }
+  try{
+    const r=await apiFetch('/v1/jobs/' + encodeURIComponent(String(jobId)) + '/timeline');
+    if(!r.ok){ return null; }
+    return await r.json().catch(()=>null);
+  }catch(_err){
+    return null;
+  }
+}
+
+async function fetchJobEvents(jobId){
+  if(!jobId){ return null; }
+  try{
+    const r=await apiFetch('/v1/jobs/' + encodeURIComponent(String(jobId)) + '/events?limit=40');
+    if(!r.ok){ return null; }
+    return await r.json().catch(()=>null);
+  }catch(_err){
+    return null;
+  }
+}
+
+function renderSpotEventInspector(spot, timeline, eventPayload){
+  const host=document.getElementById('spot-event-inspector');
+  if(!host){ return; }
+  if(!spot){
+    host.textContent='Timeline mapper: waiting for spotlight job.';
+    return;
+  }
+  const source=String((timeline && timeline.source) || 'unknown');
+  const eventCount=Number((timeline && timeline.event_count) || (eventPayload && eventPayload.event_count) || 0);
+  const rows=Array.isArray(eventPayload && eventPayload.events) ? eventPayload.events.slice(-8) : [];
+  if(rows.length === 0){
+    host.innerHTML='Timeline mapper: ' + escHtml(source) + ' · events=' + String(eventCount) + '<br>No worker events recorded yet.';
+    return;
+  }
+  const lines=rows.map(function(ev){
+    const ts=ev.timestamp ? fmtUtc(ev.timestamp) : 'n/a';
+    const t=String(ev.type || 'event');
+    const stage=(ev.stage ? (' · stage=' + String(ev.stage)) : '');
+    const st=(ev.status ? (' · status=' + String(ev.status)) : '');
+    const msg=(ev.message ? (' · ' + String(ev.message)) : '');
+    return escHtml(ts + ' · ' + t + stage + st + msg);
+  });
+  host.innerHTML='Timeline mapper: ' + escHtml(source) + ' · events=' + String(eventCount) + '<br>' + lines.join('<br>');
+}
+
+function renderSpotTimeline(spot, timeline){
+  const host = document.getElementById('spot-timeline');
+  if(!host){ return; }
+  if(!spot){
+    const greySteps = [
+      {label:'Dataset validated', t:'Pending', note:'Pipeline task on hold'},
+      {label:'Payment confirmed', t:'Pending', note:'Pipeline task on hold'},
+      {label:'GPU allocated · queued', t:'Pending', note:'Pipeline task on hold'},
+      {label:'Signal detection · executing', t:'Pending', note:'Pipeline task on hold'},
+      {label:'Quality gate + proof generation', t:'Pending', note:'Pipeline task on hold'},
+      {label:'Results packaged · delivery', t:'Pending', note:'Pipeline task on hold'}
+    ];
+    host.innerHTML = greySteps.map(function(step){
+      return '' +
+      '<div class="tl-step">' +
+        '<div class="tl-dot p">&#9675;</div>' +
+        '<div class="tl-info">' +
+          '<div class="tl-lbl">' + escHtml(step.label) + '</div>' +
+          '<div class="tl-t">' + escHtml(step.t) + '</div>' +
+          '<div class="tl-note">' + escHtml(step.note) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return;
+  }
+  const steps = (timeline && Array.isArray(timeline.steps)) ? timeline.steps : [];
+  if(steps.length === 0){
+    const greySteps = [
+      {label:'Dataset validated', note:'Pipeline task on hold'},
+      {label:'Payment confirmed', note:'Pipeline task on hold'},
+      {label:'GPU allocated · queued', note:'Pipeline task on hold'},
+      {label:'Signal detection · executing', note:'Pipeline task on hold'},
+      {label:'Quality gate + proof generation', note:'Pipeline task on hold'},
+      {label:'Results packaged · delivery', note:'Pipeline task on hold'}
+    ];
+    host.innerHTML = greySteps.map(function(step){
+      return '<div class="tl-step"><div class="tl-dot p">&#9675;</div><div class="tl-info"><div class="tl-lbl">' + escHtml(step.label) + '</div><div class="tl-t">Pending</div><div class="tl-note">' + escHtml(step.note) + '</div></div></div>';
+    }).join('');
+    return;
+  }
+  host.innerHTML = steps.map(function(step){
+    const st = String(step.status || 'pending').toLowerCase();
+    const stateCls = (st === 'done') ? 'd' : (st === 'active' ? 'a' : (st === 'failed' ? 'f' : 'p'));
+    const dot = (st === 'done') ? '&#10003;' : (st === 'active' ? '&#9654;' : (st === 'failed' ? '&#10007;' : '&#9675;'));
+    const atVal = step.at ? fmtUtc(step.at) : (st === 'pending' ? 'Pending' : '');
+    return '' +
+      '<div class="tl-step">' +
+        '<div class="tl-dot ' + stateCls + '">' + dot + '</div>' +
+        '<div class="tl-info">' +
+          '<div class="tl-lbl">' + escHtml(step.label || step.key || 'step') + '</div>' +
+          '<div class="tl-t">' + escHtml(atVal || '') + '</div>' +
+          '<div class="tl-note">' + escHtml(step.note || '') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+}
+
+function renderJobsTable(rows){
+  const body = document.getElementById('jobs-table-body');
+  if(!body){ return; }
+  if(!rows || rows.length === 0){
+    body.innerHTML = '<tr><td colspan="9" class="mono" style="font-size:.68rem;color:var(--td)">No jobs yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(function(j){
+    const pct = Number(j.progress_pct || 0);
+    const profile = String(j.profile || 'standard');
+    const statusLabel = String(j.status_label || j.status || 'Unknown');
+    const eta = fmtEta(j.eta);
+    const estCost = (j.cost_estimate == null ? null : Number(j.cost_estimate));
+    const cost = (j.cost_accrued == null
+      ? (estCost == null || !isFinite(estCost) ? 'n/a' : ('~' + fmtUsd(estCost)))
+      : fmtUsd(j.cost_accrued));
+    const tagClass = profileTagClass(profile);
+    const dataset = String(j.dataset_name || j.job_id || 'dataset');
+    const toys = j.n_toys == null ? '' : (' · ' + Number(j.n_toys).toLocaleString() + ' toys');
+    const datasetSub = String((j.input_type || 'dataset') + toys);
+    const createdAt = fmtDateTimeUtc(j.created_at);
+    const queuePos = (j.queue_position == null ? '' : ('Position #' + String(j.queue_position)));
+    const queueReady = !!j.queue_ready;
+    const progressCell = (String(j.status || '') === 'RECEIVED')
+      ? '<div class="mono" style="font-size:.65rem;color:var(--td)">' + escHtml(queueReady ? (queuePos || 'Queued') : 'Awaiting checkout confirmation') + '</div>'
+      : '<div class="pb"><div class="pbf" style="width:' + Math.max(0, Math.min(100, pct)).toFixed(1) + '%"></div></div><div style="font-family:var(--mono);font-size:.56rem;color:var(--td);margin-top:2px">' + pct.toFixed(1) + '%</div>';
+    const cancelStyle = j.can_cancel ? '' : 'opacity:.35;pointer-events:none;';
+    const proofBtn = '<div class="icon-btn" title="View proof" onclick="viewProof(\'' + escHtml(j.job_id || '') + '\')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M6.5 4v3l2 1"/></svg></div>';
+    const rerunBtn = '<div class="icon-btn" title="Rerun" onclick="rerunJob(\'' + escHtml(j.job_id || '') + '\')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5A4.5 4.5 0 0111 4M11 4V1.5M11 4H8.5"/><path d="M11 6.5A4.5 4.5 0 012 9M2 9v2.5M2 9h2.5"/></svg></div>';
+    const dlBtn = '<div class="icon-btn" title="Download" onclick="downloadJob(\'' + escHtml(j.job_id || '') + '\')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 2v7M3.5 7l3 3 3-3"/><path d="M2 11h9"/></svg></div>';
+    const cancelBtn = '<div class="icon-btn" title="Cancel job" style="color:rgba(255,71,87,.55);' + cancelStyle + '" onclick="cancelJob(\'' + escHtml(j.job_id || '') + '\')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l7 7M10 3L3 10"/></svg></div>';
+    return '' +
+      '<tr>' +
+        '<td><div class="job-id">' + escHtml(j.job_id || '') + '</div></td>' +
+        '<td class="mono" style="font-size:.62rem;color:var(--td)">' + escHtml(createdAt) + '</td>' +
+        '<td><div class="job-nm">' + escHtml(dataset) + '</div><div class="job-sub">' + escHtml(datasetSub) + '</div></td>' +
+        '<td><span class="tag ' + tagClass + '">' + escHtml(profile.charAt(0).toUpperCase() + profile.slice(1)) + '</span></td>' +
+        '<td>' + statusChip(statusLabel, j.status) + '</td>' +
+        '<td>' + progressCell + '</td>' +
+        '<td class="mono" style="font-size:.68rem;color:var(--tm)">' + escHtml(eta) + '</td>' +
+        '<td class="mono" style="font-size:.7rem">' + escHtml(cost) + '</td>' +
+        '<td><div class="ag">' + proofBtn + rerunBtn + dlBtn + cancelBtn + '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function stageDisplay(stage, status){
+  const s = String(stage || '').toUpperCase();
+  const st = String(status || '').toUpperCase();
+  if(st === 'RECEIVED'){ return 'queued'; }
+  if(st === 'DONE'){ return 'completed'; }
+  if(st === 'ERROR' || st === 'TIMEOUT' || st === 'INTERRUPTED'){ return 'stopped'; }
+  if(s === 'PARSING'){ return 'parsing'; }
+  if(s === 'NORMALIZING'){ return 'normalizing'; }
+  if(s === 'SCANNING'){ return 'signal detection'; }
+  if(s === 'CALIBRATING'){ return 'quality gate'; }
+  return (s ? s.toLowerCase() : 'active');
+}
+
+function applySpotlight(spot, generatedAtTs, timelineData, eventPayload){
+  if(!spot){
+    renderSpotTimeline(null, null);
+    renderSpotEventInspector(null, null, null);
+    const ids = ['spot-title','spot-id','spot-progress-sub','spot-eta','spot-eta-sub','spot-gpu','spot-gpu-sub','spot-kernel-runtime','spot-kernel-runtime-sub','spot-cost','spot-cost-sub'];
+    ids.forEach(function(id){
+      const el = document.getElementById(id);
+      if(el){ el.textContent = (id === 'spot-title' ? 'No active job' : (id === 'spot-id' ? 'Waiting for pipeline activity' : 'n/a')); }
+    });
+    const bar0 = document.getElementById('spot-progress');
+    if(bar0){ bar0.style.width = '0%'; }
+    return;
+  }
+  const title = document.getElementById('spot-title');
+  const sid = document.getElementById('spot-id');
+  const bar = document.getElementById('spot-progress');
+  const psub = document.getElementById('spot-progress-sub');
+  const eta = document.getElementById('spot-eta');
+  const etaSub = document.getElementById('spot-eta-sub');
+  const gpu = document.getElementById('spot-gpu');
+  const gpuSub = document.getElementById('spot-gpu-sub');
+  const kernelRuntime = document.getElementById('spot-kernel-runtime');
+  const kernelRuntimeSub = document.getElementById('spot-kernel-runtime-sub');
+  const cost = document.getElementById('spot-cost');
+  const costSub = document.getElementById('spot-cost-sub');
+  if(title){ title.textContent = (spot.job_id || 'Job') + ' · ' + (spot.status_label || spot.status || 'Unknown'); }
+  if(sid){ sid.textContent = (spot.job_id || 'n/a') + ' · ' + (spot.profile || 'standard') + ' profile'; }
+  if(bar){ bar.style.width = String(Math.max(0, Math.min(100, Number(spot.progress_pct || 0)))) + '%'; }
+  if(psub){ psub.textContent = Number(spot.progress_pct || 0).toFixed(1) + '% · ' + stageDisplay(spot.stage, spot.status); }
+  if(eta){ eta.textContent = (spot.eta == null ? 'n/a' : fmtEta(spot.eta)); }
+  if(etaSub){
+    const statusNow = String(spot.status || '').toUpperCase();
+    if(statusNow === 'ERROR' || statusNow === 'TIMEOUT' || statusNow === 'INTERRUPTED'){
+      etaSub.textContent = 'Stopped';
+    }else{
+      const etaRaw = spot.eta;
+      const etaHasValue = !(etaRaw === null || etaRaw === undefined || etaRaw === '');
+      const etaMin = etaHasValue ? Number(etaRaw) : NaN;
+      const baseTs = Number(generatedAtTs || spot.updated_at || spot.created_at || 0);
+      if(etaHasValue && isFinite(etaMin) && etaMin >= 0 && isFinite(baseTs) && baseTs > 0){
+        etaSub.textContent = fmtUtc(baseTs + (etaMin * 60.0)) + ' estimated';
+      }else if(String(spot.eta_source || '') === 'progress_runtime'){
+        etaSub.textContent = 'Derived from runtime progress';
+      }else{
+        etaSub.textContent = 'No ETA telemetry yet';
+      }
+    }
+  }
+  if(gpu){ gpu.textContent = (spot.gpu_utilization_pct == null ? 'n/a' : Number(spot.gpu_utilization_pct).toFixed(1) + '%'); }
+  if(gpuSub){ gpuSub.textContent = (spot.gpu_telemetry_available ? ('reported ' + fmtUtc(spot.telemetry_generated_at || spot.updated_at)) : 'No GPU telemetry yet (worker feed pending)'); }
+  if(kernelRuntime){
+    kernelRuntime.textContent = (spot.kernel_runtime_seconds == null ? 'n/a' : Number(spot.kernel_runtime_seconds).toFixed(3) + ' s');
+  }
+  if(kernelRuntimeSub){
+    if(spot.kernel_telemetry_available){
+      const parts = [];
+      if(spot.kernel_avg_time_ms != null){ parts.push('avg ' + Number(spot.kernel_avg_time_ms).toFixed(3) + ' ms'); }
+      if(spot.kernel_avg_power_w != null){ parts.push(Number(spot.kernel_avg_power_w).toFixed(2) + ' W'); }
+      if(spot.kernel_est_gflops != null){ parts.push(Number(spot.kernel_est_gflops).toFixed(2) + ' GFLOPS'); }
+      if(spot.kernel_profile_measured){ parts.push('profile ' + String(spot.kernel_profile_measured)); }
+      if(spot.kernel_backend_mode){ parts.push(String(spot.kernel_backend_mode)); }
+      parts.push('reported ' + fmtUtc(spot.telemetry_generated_at || spot.updated_at));
+      kernelRuntimeSub.textContent = parts.join(' · ');
+    }else{
+      kernelRuntimeSub.textContent = 'No kernel timing telemetry yet';
+    }
+  }
+  const accruedRaw = spot.cost_accrued;
+  const accrued = Number(accruedRaw || 0);
+  const est = Number(spot.cost_estimate);
+  const cap = Number(spot.cap_amount || 0);
+  if(cost){
+    if(accruedRaw == null){
+      cost.textContent = (isFinite(est) ? ('~' + fmtUsd(est)) : 'n/a');
+    }else{
+      cost.textContent = fmtUsd(accrued);
+    }
+  }
+  if(costSub){
+    const statusNow = String(spot.status || '').toUpperCase();
+    if(!spot.cost_telemetry_available){
+      costSub.textContent = (isFinite(est) ? 'Estimate pending settlement' : 'No usage-cost telemetry yet');
+    }else if(statusNow === 'DONE'){
+      if(isFinite(cap) && cap > 0){
+        const rem = Math.max(0, cap - accrued);
+        costSub.textContent = 'Final charge settled · ' + fmtUsd(rem) + ' cap headroom';
+      }else{
+        costSub.textContent = 'Final charge settled';
+      }
+    }else if(isFinite(cap) && cap > 0){
+      const pctCap = Math.max(0, Math.min(999, (accrued / cap) * 100));
+      costSub.textContent = fmtUsd(cap) + ' cap · ' + pctCap.toFixed(1) + '% used';
+    }else{
+      costSub.textContent = 'No cap configured';
+    }
+  }
+  renderSpotTimeline(spot, timelineData || null);
+  renderSpotEventInspector(spot, timelineData || null, eventPayload || null);
+  const cancel = document.getElementById('spot-cancel-btn');
+  if(cancel){
+    cancel.style.opacity = spot.can_cancel ? '1' : '.35';
+    cancel.style.pointerEvents = spot.can_cancel ? 'auto' : 'none';
+    cancel.onclick = function(){ cancelJob(String(spot.job_id || '')); };
+  }
+}
+
+async function cancelJob(jobId){
+  if(!jobId){ return; }
+  const ok = confirm('Cancel job ' + jobId + '?');
+  if(!ok){ return; }
+  const r = await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/cancel', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reason: 'ui_cancel'})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Cancel failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  await loadJobsDashboard();
+  await loadSupportArea();
+}
+
+async function rerunJob(jobId){
+  if(!jobId){ return; }
+  const r = await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/rerun', {method:'POST'});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Rerun failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  alert('Rerun created: ' + String(data.job_id || ''));
+  nav(null,'jobs');
+  await loadJobsDashboard();
+}
+
+async function downloadJob(jobId){
+  if(!jobId){ return; }
+  const r = await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/download');
+  if(!r.ok){
+    const data = await r.json().catch(()=>({}));
+    alert('Download failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  const blob = await r.blob();
+  downloadBlob(blob, jobId + '-results.csv');
+}
+
+async function viewProof(jobId){
+  if(!jobId){ return; }
+  const r = await apiFetch('/v1/jobs/' + encodeURIComponent(jobId) + '/trust-report?view=internal');
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('View proof failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  selectedResultsJobId = String(jobId);
+  nav(null,'results');
+  await loadResultsPanel();
+}
+
+async function loadJobsDashboard(){
+  try{
+    const [rSummary, rJobs, rLive] = await Promise.all([
+      apiFetch('/v1/org/summary'),
+      apiFetch('/v1/jobs?limit=50'),
+      apiFetch('/v1/jobs/live')
+    ]);
+    if(rSummary.status === 401 || rJobs.status === 401 || rLive.status === 401){
+      clearStoredToken();
+      setAuthVisual(null);
+      renderJobsTable([]);
+      applySpotlight(null, null, null, null);
+      return;
+    }
+    if(rSummary.ok){
+      const s = await rSummary.json();
+      const k = s.kpis || {};
+      const q = s.queue_health || {};
+      const setTxt = function(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; };
+      setTxt('kpi-month-spend', fmtUsd(k.month_spend_usd || 0));
+      setTxt('kpi-jobs-completed', String(k.jobs_completed || 0));
+      setTxt('kpi-jobs-queued', String(k.jobs_queued || 0));
+      setTxt('kpi-reliability', (k.reliability_30d == null ? 'n/a' : Number(k.reliability_30d).toFixed(1) + '%'));
+      setTxt('kpi-month-spend-sub', 'live org ledger');
+      setTxt('kpi-jobs-completed-sub', 'completed jobs');
+      setTxt('kpi-jobs-queued-sub', (q.active_workers || 0) + ' worker(s) active');
+      setTxt('kpi-reliability-sub', 'A/B grade completion ratio');
+      setTxt('queue-avg-top', (q.avg_wait_time_seconds == null ? 'n/a' : '~' + Math.round(Number(q.avg_wait_time_seconds)/60) + ' min'));
+    }
+    if(rJobs.ok){
+      const j = await rJobs.json();
+      renderJobsTable(j.jobs || []);
+    }else{
+      renderJobsTable([]);
+    }
+    if(rLive.ok){
+      const l = await rLive.json();
+      let spot = l.spotlight || null;
+      let timeline = null;
+      let events = null;
+      if(spot && spot.job_id){
+        spot = await enrichSpotlightWithTelemetry(spot);
+        const pair = await Promise.all([
+          fetchJobTimeline(spot.job_id),
+          fetchJobEvents(spot.job_id)
+        ]);
+        timeline = pair[0];
+        events = pair[1];
+      }
+      applySpotlight(spot, l.generated_at || null, timeline, events);
+    }
+  }catch(_err){
+    renderJobsTable([]);
+  }
+}
+
+function roleBadge(role){
+  const r = String(role || 'viewer').toLowerCase();
+  if(r === 'admin') return 'ra';
+  if(r === 'billing') return 'rb';
+  if(r === 'developer') return 'rd';
+  return 'rv';
+}
+
+async function loadTeamMembers(){
+  const body = document.getElementById('team-table-body');
+  if(!body){ return; }
+  try{
+    const r = await apiFetch('/v1/team/members');
+    if(!r.ok){ return; }
+    const data = await r.json();
+    const rows = Array.isArray(data.members) ? data.members : [];
+    body.innerHTML = rows.map(function(m){
+      const nm = escHtml(m.display_name || m.email || 'Member');
+      const em = escHtml(m.email || '');
+      const role = escHtml((m.role || 'viewer').replace('_', ' '));
+      const memberId = escHtml(m.member_id || '');
+      const memberStatus = escHtml(m.status || 'active');
+      return '' +
+        '<tr>' +
+          '<td><div class="flex gap8" style="align-items:center"><div class="avatar">' + nm.slice(0,2).toUpperCase() + '</div><div><div style="font-size:.74rem;font-weight:500;color:var(--th)">' + nm + '</div><div class="mono" style="font-size:.58rem;color:var(--td)">' + em + '</div></div></div></td>' +
+          '<td><span class="role ' + roleBadge(m.role) + '">' + role + '</span><div class="mono" style="font-size:.52rem;color:var(--td);margin-top:2px">' + memberStatus + '</div></td>' +
+          '<td class="mono" style="font-size:.7rem;color:var(--tm)">' + String(m.jobs_30d || 0) + '</td>' +
+          '<td class="mono" style="font-size:.7rem;color:var(--tm)">' + fmtUsd(m.spend_30d_usd || 0) + '</td>' +
+          '<td><div class="icon-btn" onclick="teamMemberActionPrompt(\'' + memberId + '\',\'' + escHtml(m.role || 'viewer') + '\')"><svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="3.5" r="1.5"/><circle cx="6.5" cy="9.5" r="1.5"/></svg></div></td>' +
+        '</tr>';
+    }).join('');
+  }catch(_err){}
+}
+
+function setTeamPolicyStatus(msg, isErr){
+  const el = document.getElementById('team-policy-status');
+  if(!el){ return; }
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--red)' : 'var(--td)';
+}
+
+function setTeamApiKeysStatus(msg, isErr){
+  const el = document.getElementById('team-api-keys-status');
+  if(!el){ return; }
+  el.textContent = msg;
+  el.style.color = isErr ? 'var(--red)' : 'var(--td)';
+}
+
+async function loadTeamSpendPolicy(){
+  const capIn = document.getElementById('team-cap-input');
+  const devIn = document.getElementById('team-dev-limit-input');
+  const alertIn = document.getElementById('team-alert-input');
+  const usedEl = document.getElementById('team-spend-used');
+  const pctEl = document.getElementById('team-spend-pct');
+  const minEl = document.getElementById('team-spend-min');
+  const maxEl = document.getElementById('team-spend-max');
+  const fillEl = document.getElementById('team-spend-fill');
+  if(!capIn || !devIn || !alertIn || !usedEl || !pctEl || !minEl || !maxEl || !fillEl){ return; }
+  try{
+    const [rPolicy, rSummary] = await Promise.all([
+      apiFetch('/v1/org/spend-policy'),
+      apiFetch('/v1/org/summary')
+    ]);
+    if(!rPolicy.ok){ setTeamPolicyStatus('Policy source: unavailable', true); return; }
+    const policyPayload = await rPolicy.json().catch(()=>({}));
+    const policy = policyPayload.policy || {};
+    const cap = Number(policy.monthly_cap_usd || 0);
+    const dev = Number(policy.developer_member_limit_usd || 0);
+    const alertPct = Number(policy.alert_threshold_pct || 0);
+    capIn.value = String(Number.isFinite(cap) ? cap : 0);
+    devIn.value = String(Number.isFinite(dev) ? dev : 0);
+    alertIn.value = String(Number.isFinite(alertPct) ? alertPct : 0);
+
+    let monthSpend = 0;
+    let consumptionPct = 0;
+    if(rSummary.ok){
+      const summary = await rSummary.json().catch(()=>({}));
+      const k = summary.kpis || {};
+      const snap = summary.policy_snapshot || {};
+      monthSpend = Number(k.month_spend_usd || 0);
+      consumptionPct = Number(snap.consumption_pct || 0);
+    }
+    if(cap > 0 && !consumptionPct){
+      consumptionPct = Math.min(100, (monthSpend / cap) * 100);
+    }
+    usedEl.textContent = fmtUsd(monthSpend) + ' / ' + fmtUsd(cap);
+    pctEl.textContent = Number(consumptionPct || 0).toFixed(1) + '% used';
+    minEl.textContent = '$0';
+    maxEl.textContent = fmtUsd(cap);
+    fillEl.style.width = Math.max(0, Math.min(100, Number(consumptionPct || 0))) + '%';
+    setTeamPolicyStatus('Policy source: /v1/org/spend-policy');
+  }catch(_err){
+    setTeamPolicyStatus('Policy source: unavailable', true);
+  }
+}
+
+async function saveTeamSpendPolicy(){
+  const capIn = document.getElementById('team-cap-input');
+  const devIn = document.getElementById('team-dev-limit-input');
+  const alertIn = document.getElementById('team-alert-input');
+  if(!capIn || !devIn || !alertIn){ return; }
+  const payload = {
+    monthly_cap_usd: Number(capIn.value || 0),
+    developer_member_limit_usd: Number(devIn.value || 0),
+    alert_threshold_pct: Number(alertIn.value || 0)
+  };
+  const r = await apiFetch('/v1/org/spend-policy', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Save limits failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    setTeamPolicyStatus('Policy save failed', true);
+    return;
+  }
+  setTeamPolicyStatus('Policy updated.');
+  await loadTeamSpendPolicy();
+}
+
+function apiKeyRow(item){
+  const status = String(item.status || 'active').toLowerCase();
+  const badge = status === 'active' ? 't' : 'fail';
+  const scopes = Array.isArray(item.scopes) && item.scopes.length ? item.scopes.join(', ') : 'none';
+  const keyId = String(item.key_id || '');
+  const canAct = status === 'active';
+  const buttons = canAct
+    ? '<div class="flex gap8" style="margin-left:auto">' +
+      '<button class="export-btn" style="padding:4px 8px;font-size:.58rem" onclick="rotateTeamApiKey(\'' + escHtml(keyId) + '\')">Rotate</button>' +
+      '<button class="export-btn" style="padding:4px 8px;font-size:.58rem;color:var(--red);border-color:rgba(255,98,98,.45)" onclick="revokeTeamApiKey(\'' + escHtml(keyId) + '\')">Revoke</button>' +
+      '</div>'
+    : '';
+  return '<div class="file-item">' +
+    '<div class="fi-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="var(--teal)" stroke-width="1.3"><path d="M10 2a4 4 0 014 4c0 1.5-.8 2.8-2 3.5V13l-2-1-2 1V9.5A4 4 0 0110 2z"/></svg></div>' +
+    '<div><div class="fi-name">' + escHtml(item.display_token || keyId) + '</div><div class="fi-meta">' + escHtml(item.name || 'API key') + ' &#183; ' + escHtml(scopes) + '</div></div>' +
+    '<span class="tag ' + badge + '" style="margin-left:auto">' + escHtml(status) + '</span>' + buttons +
+    '</div>';
+}
+
+async function loadTeamApiKeys(){
+  const wrap = document.getElementById('team-api-keys-list');
+  if(!wrap){ return; }
+  try{
+    const r = await apiFetch('/v1/org/api-keys');
+    const data = await r.json().catch(()=>({}));
+    if(!r.ok){
+      wrap.innerHTML = '';
+      setTeamApiKeysStatus('Key source: unavailable', true);
+      return;
+    }
+    const keys = Array.isArray(data.keys) ? data.keys : [];
+    if(keys.length === 0){
+      wrap.innerHTML = '<div class="mono" style="font-size:.62rem;color:var(--td)">No API keys yet.</div>';
+    }else{
+      wrap.innerHTML = keys.map(apiKeyRow).join('');
+    }
+    setTeamApiKeysStatus('Key source: /v1/org/api-keys');
+  }catch(_err){
+    wrap.innerHTML = '';
+    setTeamApiKeysStatus('Key source: unavailable', true);
+  }
+}
+
+async function createTeamApiKey(){
+  const name = (prompt('API key name:','Production key') || '').trim();
+  if(!name){ return; }
+  const scopesRaw = (prompt('Scopes (comma-separated):','jobs:read,jobs:write,billing:read') || '').trim();
+  const scopes = scopesRaw ? scopesRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const r = await apiFetch('/v1/org/api-keys', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name, scopes: scopes})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Create API key failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    setTeamApiKeysStatus('Key creation failed', true);
+    return;
+  }
+  const secret = String(data.secret || '');
+  alert('New API key secret (shown once):\n' + secret);
+  setTeamApiKeysStatus('Key created.');
+  await loadTeamApiKeys();
+}
+
+async function rotateTeamApiKey(keyId){
+  if(!keyId){ return; }
+  const ok = confirm('Rotate API key ' + keyId + '?');
+  if(!ok){ return; }
+  const r = await apiFetch('/v1/org/api-keys/' + encodeURIComponent(keyId) + '/rotate', { method:'POST' });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Rotate failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  alert('Rotated API key secret (shown once):\n' + String(data.secret || ''));
+  await loadTeamApiKeys();
+}
+
+async function revokeTeamApiKey(keyId){
+  if(!keyId){ return; }
+  const ok = confirm('Revoke API key ' + keyId + '? This cannot be undone.');
+  if(!ok){ return; }
+  const r = await apiFetch('/v1/org/api-keys/' + encodeURIComponent(keyId) + '/revoke', { method:'POST' });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Revoke failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  await loadTeamApiKeys();
+}
+
+async function loadTeamGovernance(){
+  await Promise.all([loadTeamSpendPolicy(), loadTeamApiKeys()]);
+}
+
+async function teamMemberActionPrompt(memberId,currentRole){
+  if(!memberId){ return; }
+  const action = (prompt('Team action for ' + memberId + ' (role|revoke):','role') || '').trim().toLowerCase();
+  if(!action){ return; }
+  if(action === 'revoke'){
+    const r = await apiFetch('/v1/team/members/' + encodeURIComponent(memberId) + '/revoke', {method:'POST'});
+    const data = await r.json().catch(()=>({}));
+    if(!r.ok){
+      alert('Revoke failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+      return;
+    }
+    await loadTeamMembers();
+    return;
+  }
+  const role = (prompt('New role (admin|billing|developer|viewer):', currentRole || 'viewer') || '').trim().toLowerCase();
+  if(!role){ return; }
+  const r = await apiFetch('/v1/team/members/' + encodeURIComponent(memberId) + '/role', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({role: role})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Role update failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  await loadTeamMembers();
+}
+
+async function inviteTeamMember(){
+  const email = (prompt('Invite member email:','') || '').trim();
+  if(!email){ return; }
+  const role = (prompt('Role (admin|billing|developer|viewer):','viewer') || 'viewer').trim().toLowerCase();
+  const name = (prompt('Display name (optional):','') || '').trim();
+  const r = await apiFetch('/v1/team/invite', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email: email, role: role, display_name: name || null})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Invite failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return;
+  }
+  await loadTeamMembers();
+}
+
+function alertCard(a){
+  const sev = String(a.severity || 'warn').toLowerCase();
+  const cls = sev === 'error' ? 'al-err' : 'al-warn';
+  const btn = sev === 'error' ? 'al-cta-r' : 'al-cta';
+  return '<div class="alert ' + cls + '"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="6.5"/><path d="M8.5 5.5v4M8.5 12v.5"/></svg><div class="al-txt"><strong>' + escHtml(a.title || 'Alert') + '</strong> &#8212; ' + escHtml(a.message || '') + '</div><button class="' + btn + '" onclick="nav(null,' + (sev === 'error' ? '\'upload\'' : '\'checkout\'') + ')">Open &#8594;</button></div>';
+}
+
+async function loadSupportArea(){
+  const wrap = document.getElementById('support-alerts');
+  if(!wrap){ return; }
+  try{
+    const r = await apiFetch('/v1/support/alerts');
+    if(!r.ok){ return; }
+    const data = await r.json();
+    const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+    if(alerts.length === 0){
+      wrap.innerHTML = '<div class="alert al-info"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="var(--teal)" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="6.5"/><path d="M8.5 5.5v4M8.5 12v.5"/></svg><div class="al-txt"><strong>No active alerts.</strong> Pipeline and billing channels look healthy.</div></div>';
+      return;
+    }
+    wrap.innerHTML = alerts.slice(0,2).map(alertCard).join('');
+  }catch(_err){}
+}
+
+async function postRecovery(path, payload){
+  const r = await apiFetch(path, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload || {})
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    alert('Action failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+    return null;
+  }
+  return data;
+}
+
+async function newestFailedJobId(){
+  const r = await apiFetch('/v1/jobs?limit=50');
+  if(!r.ok){ return null; }
+  const data = await r.json().catch(()=>({}));
+  const rows = Array.isArray(data.jobs) ? data.jobs : [];
+  const f = rows.find(x => ['ERROR','TIMEOUT','INTERRUPTED'].includes(String(x.status || '').toUpperCase()));
+  return f ? f.job_id : null;
+}
+
+function wireSupportRecoveryButtons(){
+  const bRetryJob = document.getElementById('btn-recovery-retry-job');
+  const bCredit = document.getElementById('btn-recovery-credit');
+  const bDispute = document.getElementById('btn-recovery-dispute');
+  const bRetryPay = document.getElementById('btn-recovery-retry-payment');
+  if(bRetryJob){
+    bRetryJob.onclick = async function(){
+      const jid = (await newestFailedJobId()) || (prompt('Job ID for retry-job action:','') || '').trim();
+      if(!jid){ return; }
+      const res = await postRecovery('/v1/support/recovery/retry-job', {job_id: jid});
+      if(res){ alert('Recovery action accepted: retry-job for ' + jid); }
+    };
+  }
+  if(bCredit){
+    bCredit.onclick = async function(){
+      const amount = Number(prompt('Credit amount USD:','10') || '0');
+      const reason = (prompt('Reason:','service issue') || '').trim();
+      const res = await postRecovery('/v1/support/recovery/request-credit', {amount_usd: amount, reason: reason});
+      if(res){ alert('Credit request accepted.'); }
+    };
+  }
+  if(bDispute){
+    bDispute.onclick = async function(){
+      const jid = (prompt('Job ID to dispute (optional):','') || '').trim();
+      const reason = (prompt('Dispute reason:','please review billing') || '').trim();
+      const res = await postRecovery('/v1/support/recovery/dispute-charge', {job_id: jid || null, reason: reason});
+      if(res){ alert('Dispute request accepted.'); }
+    };
+  }
+  if(bRetryPay){
+    bRetryPay.onclick = async function(){
+      const jid = (prompt('Job ID for retry-payment action:','') || '').trim();
+      if(!jid){ return; }
+      const res = await postRecovery('/v1/support/recovery/retry-payment', {job_id: jid});
+      if(res){ alert('Retry-payment action accepted for ' + jid); }
+    };
+  }
+}
+
+// ------------------------------------------------------------
+// Operator helper: simulate payment confirmation (no real PSP)
+// ------------------------------------------------------------
+function getApiToken(){
+  let t = localStorage.getItem('axiom_api_token') || '';
+  if(!t){
+    t = prompt('API token for simulation (Bearer token):','') || '';
+    if(t){ localStorage.setItem('axiom_api_token', t); }
+  }
+  return t.trim();
+}
+
+async function simulatePaymentConfirm(){
+  const jobId = (prompt('Job ID to release after simulated payment:','') || '').trim();
+  if(!jobId){ return; }
+  const token = getApiToken();
+  if(!token){
+    alert('Missing API token.');
+    return;
+  }
+  const ref = 'simulated-payment-' + Date.now();
+  try{
+    const r = await fetch('/v1/jobs/' + encodeURIComponent(jobId) + '/billing/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ approved: true, reference: ref })
+    });
+    const data = await r.json().catch(()=>({}));
+    if(!r.ok){
+      alert('Simulation failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+      return;
+    }
+    alert('Payment simulated. queued=' + String(data.queued) + ', billing_status=' + String(data.billing_status || ''));
+  }catch(err){
+    alert('Simulation request error: ' + err);
+  }
+}
+
+async function handleAuthQueryActions(){
+  try{
+    const qp = new URLSearchParams(window.location.search || '');
+    const resetToken = (qp.get('reset_token') || '').trim();
+    if(resetToken){
+      const p1 = (prompt('Set new password for reset token (min 10 chars):','') || '');
+      if(p1){
+        const r = await fetch('/v1/auth/password/reset', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({token: resetToken, new_password: p1})
+        });
+        const data = await r.json().catch(()=>({}));
+        if(r.ok){
+          alert('Password reset successful. You can log in now.');
+        }else{
+          alert('Password reset failed: HTTP ' + r.status + ' ' + (data.detail || ''));
+        }
+      }
+      qp.delete('reset_token');
+      const newQ = qp.toString();
+      history.replaceState({}, document.title, window.location.pathname + (newQ ? ('?' + newQ) : ''));
+    }
+  }catch(_){}
+}
+
+(function addSimButton(){
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Payment happened (simulate)';
+  btn.style.position = 'fixed';
+  btn.style.right = '14px';
+  btn.style.bottom = '14px';
+  btn.style.zIndex = '9999';
+  btn.style.background = 'rgba(0,229,200,.14)';
+  btn.style.border = '1px solid rgba(0,229,200,.55)';
+  btn.style.color = '#bffef0';
+  btn.style.padding = '8px 10px';
+  btn.style.borderRadius = '6px';
+  btn.style.fontFamily = 'var(--mono)';
+  btn.style.fontSize = '.68rem';
+  btn.style.cursor = 'pointer';
+  btn.style.letterSpacing = '.02em';
+  btn.onclick = simulatePaymentConfirm;
+  document.body.appendChild(btn);
+})();
+
+wireInvoiceButtons();
+wireSupportRecoveryButtons();
+const checkoutBtn = document.getElementById('btn-checkout-launch');
+if(checkoutBtn){ checkoutBtn.onclick = launchCheckout; }
+const uploadPickBtn = document.getElementById('btn-upload-pick');
+const uploadFileInput = document.getElementById('upload-file-input');
+const uploadSubmitBtn = document.getElementById('btn-upload-submit');
+const uploadToCheckoutBtn = document.getElementById('btn-upload-to-checkout');
+if(uploadPickBtn && uploadFileInput){
+  uploadPickBtn.onclick = function(){ uploadFileInput.click(); };
+}
+if(uploadFileInput){
+  uploadFileInput.onchange = function(){
+    const f = selectedUploadFile();
+    uploadState.file = f;
+    updateUploadFilePreview(f);
+    if(f){
+      setUploadStatus('Selected ' + String(f.name || 'file') + '. Ready to create job draft.', false);
+      checkoutState.jobId = null;
+      checkoutState.quote = null;
+      checkoutState.authorization = null;
+    }else{
+      setUploadStatus('Upload: waiting for file selection.', false);
+    }
+  };
+}
+if(uploadSubmitBtn){
+  uploadSubmitBtn.onclick = async function(){ await createUploadDraft(false); };
+}
+if(uploadToCheckoutBtn){
+  uploadToCheckoutBtn.onclick = async function(){ await createUploadDraft(true); };
+}
+// global flags for UI flow
+window.isSubmitting = false;
+window.mainPoller = null;
+window.checkoutPollJobId = null;
+window.checkoutReady = false;
+window.loadCheckoutPromise = null;
+
+const inviteBtn = document.getElementById('btn-team-invite');
+if(inviteBtn){ inviteBtn.onclick = inviteTeamMember; }
+const saveLimitsBtn = document.getElementById('btn-team-save-limits');
+if(saveLimitsBtn){ saveLimitsBtn.onclick = saveTeamSpendPolicy; }
+const createApiKeyBtn = document.getElementById('btn-team-create-api-key');
+if(createApiKeyBtn){ createApiKeyBtn.onclick = createTeamApiKey; }
+const bAuthLogin = document.getElementById('btn-auth-login');
+const bAuthReg = document.getElementById('btn-auth-register');
+const bAuthForgot = document.getElementById('btn-auth-forgot');
+const bAuthOut = document.getElementById('btn-auth-logout');
+if(bAuthLogin){ bAuthLogin.onclick = authLoginPrompt; }
+if(bAuthReg){ bAuthReg.onclick = authRegisterPrompt; }
+if(bAuthForgot){ bAuthForgot.onclick = authForgotPrompt; }
+if(bAuthOut){ bAuthOut.onclick = authLogout; }
+refreshAuthState().catch(()=>{});
+handleAuthQueryActions().catch(()=>{});
+updateEst();
+renderSpotTimeline(null);
+loadJobsDashboard();
+if(window.mainPoller){ clearInterval(window.mainPoller); }
+window.mainPoller = setInterval(function(){
+  const active = document.querySelector('.page.active');
+  if(!active || !active.id){ return; }
+  if(active.id === 'p-jobs'){ loadJobsDashboard(); }
+  if(active.id === 'p-checkout'){ loadCheckoutPanel(); }
+  if(active.id === 'p-results'){ loadResultsPanel(); }
+  if(active.id === 'p-invoices'){ loadInvoices(); }
+  if(active.id === 'p-team'){ loadTeamMembers(); loadTeamGovernance(); }
+  if(active.id === 'p-support'){ loadSupportArea(); }
+}, 8000);
+</script>
+</body>
+</html>

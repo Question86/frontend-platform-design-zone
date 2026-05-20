@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Frontend Platform Design Zone</title>
+  <style>
+    :root {
+      --bg: #f2efe7;
+      --ink: #0f172a;
+      --ink-soft: #334155;
+      --panel: #fffdf9;
+      --accent: #d9480f;
+      --accent-2: #0ea5e9;
+      --line: #e2d9c8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, #fde68a 0%, transparent 38%),
+        radial-gradient(circle at 90% 20%, #bae6fd 0%, transparent 35%),
+        linear-gradient(180deg, #f9f7f1 0%, #f2efe7 100%);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+    .hero {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .tag {
+      width: fit-content;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.65);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 6vw, 62px);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      max-width: 700px;
+      color: var(--ink-soft);
+      font-size: clamp(16px, 2vw, 20px);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 18px;
+      border-radius: 16px;
+      min-height: 170px;
+      display: grid;
+      align-content: space-between;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+    h3 { margin: 0 0 8px 0; font-size: 19px; }
+    .meta {
+      margin: 0 0 16px 0;
+      color: #64748b;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .cta {
+      display: inline-block;
+      text-decoration: none;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      padding: 10px 14px;
+      border-radius: 10px;
+      width: fit-content;
+    }
+    .foot {
+      margin-top: 32px;
+      font-size: 13px;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='tag'>Design Zone</div>
+      <h1>Frontend + Platform
+      Sheet Gallery</h1>
+      <p class='sub'>Curated reference sheets extracted from your local workspace for UI, cockpit, runtime and platform interaction design.</p>
+    </section>
+    <section class='grid'>
+<article class='card'><h3>Axiom Provenance RTL Conveyor</h3><p class='meta'>axiom_provenance_rtl_conveyor.html</p><a class='cta' href='sheets/axiom_provenance_rtl_conveyor.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Network Cockpit</h3><p class='meta'>network_cockpit.html</p><a class='cta' href='sheets/network_cockpit.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Axiom Cockpit</h3><p class='meta'>axiom_cockpit.html</p><a class='cta' href='sheets/axiom_cockpit.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Axiom Runtime Chain Live Monitor</h3><p class='meta'>axiom_runtime_chain_live_monitor.html</p><a class='cta' href='sheets/axiom_runtime_chain_live_monitor.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Core Cockpit</h3><p class='meta'>cockpit.html</p><a class='cta' href='sheets/cockpit.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Experimental Loop UI</h3><p class='meta'>experimental_loop_ui.html</p><a class='cta' href='sheets/experimental_loop_ui.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>VM Root Index</h3><p class='meta'>vm_root_index.html</p><a class='cta' href='sheets/vm_root_index.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>PSI Oloid Final 8</h3><p class='meta'>psi_oloid_final_8.html</p><a class='cta' href='sheets/psi_oloid_final_8.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Temporary Billing UI</h3><p class='meta'>tmp_billing.html</p><a class='cta' href='sheets/tmp_billing.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+<article class='card'><h3>Precision Curves</h3><p class='meta'>precision_curves.html</p><a class='cta' href='sheets/precision_curves.html' target='_blank' rel='noopener'>Open Sheet</a></article>
+    </section>
+    <p class='foot'>Source mapping is documented in <code>sheets/source_map.csv</code>.</p>
+  </main>
+</body>
+</html>
