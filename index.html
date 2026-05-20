@@ -56,6 +56,37 @@
       color: var(--ink-soft);
       font-size: clamp(16px, 2vw, 20px);
     }
+    .hero-cover {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #0b1022;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+      position: relative;
+    }
+    .hero-cover img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 520px;
+      object-fit: cover;
+      object-position: center top;
+    }
+    .hero-label {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #dbeafe;
+      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      backdrop-filter: blur(4px);
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -107,6 +138,10 @@
       <h1>Frontend + Platform
       Sheet Gallery</h1>
       <p class='sub'>Curated reference sheets extracted from your local workspace for UI, cockpit, runtime and platform interaction design.</p>
+      <figure class='hero-cover'>
+        <img src='assets/cover_autonomous_wf.jpg' alt='Autonomous workflow cockpit cover' />
+        <figcaption class='hero-label'>Flagship: Autonomous Workflow Cockpit</figcaption>
+      </figure>
     </section>
     <section class='grid'>
 <article class='card'><h3>Axiom Provenance RTL Conveyor</h3><p class='meta'>axiom_provenance_rtl_conveyor.html</p><a class='cta' href='sheets/axiom_provenance_rtl_conveyor.html' target='_blank' rel='noopener'>Open Sheet</a></article>
@@ -125,4 +160,5 @@
   </main>
 </body>
 </html>
+
 
